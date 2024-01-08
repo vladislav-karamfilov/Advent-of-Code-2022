@@ -25,21 +25,15 @@ fn solve_puzzle2() {
 
             elf_calories.push(current_elf_calories);
 
-            is_reading_elf_calories = false;
             current_elf_calories = 0;
+            is_reading_elf_calories = false;
             continue;
         }
 
-        let calories: i32 = match trimmed_line.parse() {
-            Ok(num) => num,
-            Err(_) => {
-                println!("Elf calories number expected");
-                return;
-            }
-        };
+        let calories: i32 = trimmed_line.parse().expect("Elf calories number expected");
 
-        is_reading_elf_calories = true;
         current_elf_calories += calories;
+        is_reading_elf_calories = true;
     }
 
     elf_calories.sort();
@@ -73,21 +67,15 @@ fn solve_puzzle1() {
                 max_elf_calories = current_elf_calories;
             }
 
-            is_reading_elf_calories = false;
             current_elf_calories = 0;
+            is_reading_elf_calories = false;
             continue;
         }
 
-        let calories: i32 = match trimmed_line.parse() {
-            Ok(num) => num,
-            Err(_) => {
-                println!("Elf calories number expected");
-                return;
-            }
-        };
+        let calories: i32 = trimmed_line.parse().expect("Elf calories number expected");
 
-        is_reading_elf_calories = true;
         current_elf_calories += calories;
+        is_reading_elf_calories = true;
     }
 
     println!("{max_elf_calories}");
