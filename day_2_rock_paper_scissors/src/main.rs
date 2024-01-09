@@ -33,21 +33,20 @@ fn solve_puzzle2() {
         };
 
         let my_hand_shape = determine_my_hand_shape(opponent_hand_shape, target_round_outcome);
-
-        let hand_shape_score: i32 = match my_hand_shape {
+        let hand_shape_score = match my_hand_shape {
             HandShape::Rock => 1,
             HandShape::Paper => 2,
-            _ => 3,
+            HandShape::Scissors => 3,
         };
 
-        let round_outcome_score: i32 = match target_round_outcome {
+        let round_outcome_score = match target_round_outcome {
             RoundOutcome::Win => 6,
             RoundOutcome::Draw => 3,
-            _ => 0,
+            RoundOutcome::Loss => 0,
         };
 
-        total_score += hand_shape_score;
-        total_score += round_outcome_score;
+        let round_score = hand_shape_score + round_outcome_score;
+        total_score += round_score;
     }
 
     println!("{total_score}");
@@ -83,21 +82,20 @@ fn solve_puzzle1() {
         };
 
         let round_outcome = determine_round_outcome(opponent_hand_shape, my_hand_shape);
-
-        let hand_shape_score: i32 = match my_hand_shape {
-            HandShape::Rock => 1,
-            HandShape::Paper => 2,
-            _ => 3,
-        };
-
-        let round_outcome_score: i32 = match round_outcome {
+        let round_outcome_score = match round_outcome {
             RoundOutcome::Win => 6,
             RoundOutcome::Draw => 3,
-            _ => 0,
+            RoundOutcome::Loss => 0,
         };
 
-        total_score += hand_shape_score;
-        total_score += round_outcome_score;
+        let hand_shape_score = match my_hand_shape {
+            HandShape::Rock => 1,
+            HandShape::Paper => 2,
+            HandShape::Scissors => 3,
+        };
+
+        let round_score = hand_shape_score + round_outcome_score;
+        total_score += round_score;
     }
 
     println!("{total_score}");
