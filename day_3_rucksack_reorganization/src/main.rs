@@ -3,6 +3,7 @@ fn main() {
     solve_puzzle2();
 }
 
+#[allow(dead_code)]
 fn solve_puzzle2() {
     let mut badge_item_type_priorities_sum = 0;
     let mut group_rucksack_contents = Vec::new();
