@@ -1,3 +1,5 @@
+use std::str::Split;
+
 fn main() {
     solve_puzzle1();
 }
@@ -28,32 +30,23 @@ fn solve_puzzle1() {
         if is_reading_rearrangement_steps {
             let mut rearrangement_step_splitter = trimmed_line.split(' ');
 
-            rearrangement_step_splitter.next();
-            let count: usize = rearrangement_step_splitter
-                .next()
-                .unwrap()
-                .parse()
-                .expect("Number expected");
+            let count = parse_next_number_from_rearrangement_step_splitter(
+                &mut rearrangement_step_splitter,
+            );
 
-            rearrangement_step_splitter.next();
-            let from_stack_index: usize = rearrangement_step_splitter
-                .next()
-                .unwrap()
-                .parse()
-                .expect("Number expected");
+            let from_stack_index = parse_next_number_from_rearrangement_step_splitter(
+                &mut rearrangement_step_splitter,
+            ) - 1;
 
-            rearrangement_step_splitter.next();
-            let to_stack_index: usize = rearrangement_step_splitter
-                .next()
-                .unwrap()
-                .parse()
-                .expect("Number expected");
+            let to_stack_index = parse_next_number_from_rearrangement_step_splitter(
+                &mut rearrangement_step_splitter,
+            ) - 1;
 
             rearrange_stacks(
                 &mut stacks_of_crates,
                 count,
-                from_stack_index - 1,
-                to_stack_index - 1,
+                from_stack_index,
+                to_stack_index,
             );
         } else {
             let line_chars = line.chars();
@@ -85,6 +78,20 @@ fn print_result(stacks_of_crates: &[Vec<char>]) {
     println!();
 }
 
+fn parse_next_number_from_rearrangement_step_splitter(
+    rearrangement_step_splitter: &mut Split<'_, char>,
+) -> usize {
+    rearrangement_step_splitter.next();
+
+    let number: usize = rearrangement_step_splitter
+        .next()
+        .unwrap()
+        .parse()
+        .expect("Number expected");
+
+    number
+}
+
 fn rearrange_stacks(
     stacks_of_crates: &mut [Vec<char>],
     count: usize,
@@ -93,6 +100,7 @@ fn rearrange_stacks(
 ) {
     for _ in 0..count {
         let crate_to_rearrange = stacks_of_crates[from_stack_index].pop().unwrap();
+
         stacks_of_crates[to_stack_index].push(crate_to_rearrange);
     }
 }
