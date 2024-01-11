@@ -1,9 +1,78 @@
 use std::str::Split;
 
 fn main() {
-    solve_puzzle1();
+    // solve_puzzle1();
+    solve_puzzle2();
 }
 
+#[allow(dead_code)]
+fn solve_puzzle2() {
+    let mut is_reading_rearrangement_steps = false;
+    let mut stacks_of_crates_lines = Vec::new();
+    let mut stacks_of_crates: Vec<Vec<char>> = Vec::new();
+
+    loop {
+        let mut line = String::new();
+
+        std::io::stdin()
+            .read_line(&mut line)
+            .expect("Failed to read line");
+
+        let trimmed_line = line.trim();
+        if trimmed_line.is_empty() {
+            if is_reading_rearrangement_steps {
+                print_result(&stacks_of_crates);
+                break;
+            }
+
+            is_reading_rearrangement_steps = true;
+            continue;
+        }
+
+        if is_reading_rearrangement_steps {
+            let mut rearrangement_step_splitter = trimmed_line.split(' ');
+
+            let count = parse_next_number_from_rearrangement_step_splitter(
+                &mut rearrangement_step_splitter,
+            );
+
+            let from_stack_index = parse_next_number_from_rearrangement_step_splitter(
+                &mut rearrangement_step_splitter,
+            ) - 1;
+
+            let to_stack_index = parse_next_number_from_rearrangement_step_splitter(
+                &mut rearrangement_step_splitter,
+            ) - 1;
+
+            rearrange_multiple_crates_in_stacks_at_a_time(
+                &mut stacks_of_crates,
+                count,
+                from_stack_index,
+                to_stack_index,
+            );
+        } else {
+            let line_chars = line.chars();
+            if line_chars.clone().any(|char| char.is_ascii_digit()) {
+                for (i, char) in line_chars.enumerate() {
+                    if char.is_ascii_digit() {
+                        let crates_stack: Vec<char> = stacks_of_crates_lines
+                            .iter()
+                            .rev()
+                            .map(|crates_line: &String| crates_line.chars().nth(i).unwrap())
+                            .filter(|char| char.is_ascii_alphabetic())
+                            .collect();
+
+                        stacks_of_crates.push(crates_stack);
+                    }
+                }
+            } else {
+                stacks_of_crates_lines.push(line);
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let mut is_reading_rearrangement_steps = false;
     let mut stacks_of_crates_lines = Vec::new();
@@ -42,7 +111,7 @@ fn solve_puzzle1() {
                 &mut rearrangement_step_splitter,
             ) - 1;
 
-            rearrange_stacks(
+            rearrange_crates_in_stacks_one_by_one(
                 &mut stacks_of_crates,
                 count,
                 from_stack_index,
@@ -92,7 +161,7 @@ fn parse_next_number_from_rearrangement_step_splitter(
     number
 }
 
-fn rearrange_stacks(
+fn rearrange_crates_in_stacks_one_by_one(
     stacks_of_crates: &mut [Vec<char>],
     count: usize,
     from_stack_index: usize,
@@ -102,5 +171,23 @@ fn rearrange_stacks(
         let crate_to_rearrange = stacks_of_crates[from_stack_index].pop().unwrap();
 
         stacks_of_crates[to_stack_index].push(crate_to_rearrange);
+    }
+}
+
+fn rearrange_multiple_crates_in_stacks_at_a_time(
+    stacks_of_crates: &mut [Vec<char>],
+    count: usize,
+    from_stack_index: usize,
+    to_stack_index: usize,
+) {
+    let mut crates_to_rearrange = Vec::new();
+
+    for _ in 0..count {
+        let crate_to_rearrange = stacks_of_crates[from_stack_index].pop().unwrap();
+        crates_to_rearrange.push(crate_to_rearrange);
+    }
+
+    for crate_to_rearrange in crates_to_rearrange.iter().rev() {
+        stacks_of_crates[to_stack_index].push(*crate_to_rearrange);
     }
 }
