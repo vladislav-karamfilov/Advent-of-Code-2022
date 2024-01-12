@@ -180,7 +180,7 @@ fn rearrange_multiple_crates_in_stacks_at_a_time(
     from_stack_index: usize,
     to_stack_index: usize,
 ) {
-    let mut crates_to_rearrange = Vec::new();
+    let mut crates_to_rearrange = Vec::with_capacity(count);
 
     for _ in 0..count {
         let crate_to_rearrange = stacks_of_crates[from_stack_index].pop().unwrap();
