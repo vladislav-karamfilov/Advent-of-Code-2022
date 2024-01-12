@@ -37,7 +37,7 @@ fn calculate_processed_chars_before_marker(
     datastream_buffer: &str,
     chars_count: usize,
 ) -> Option<usize> {
-    let mut processed_chars = Vec::new();
+    let mut processed_chars = Vec::with_capacity(chars_count);
 
     for (i, char) in datastream_buffer.chars().enumerate() {
         processed_chars.push(char);
