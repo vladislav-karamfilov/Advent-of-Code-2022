@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 fn main() {
-    solve_puzzle1();
+    // solve_puzzle1();
+    solve_puzzle2();
 }
 
 fn solve_puzzle1() {
@@ -39,19 +40,65 @@ fn solve_puzzle1() {
     println!("{sum_of_target_directories}");
 }
 
+fn solve_puzzle2() {
+    let mut directories_by_name: HashMap<String, Directory> = HashMap::new();
+    let mut current_directory_path = String::new();
+
+    loop {
+        let mut line = String::new();
+
+        std::io::stdin()
+            .read_line(&mut line)
+            .expect("Failed to read line");
+
+        let line = line.trim();
+        if line.is_empty() {
+            break;
+        }
+
+        if line.starts_with('$') {
+            current_directory_path = handle_command_line(line, current_directory_path);
+        } else {
+            handle_file_entry_line(line, &current_directory_path, &mut directories_by_name);
+        }
+    }
+
+    let mut used_space = 0;
+    for (_, directory) in directories_by_name.iter() {
+        used_space += calculate_directory_size(directory, &directories_by_name);
+    }
+
+    println!("{used_space}");
+    let unused_space = 70_000_000 - used_space;
+    let space_left_to_free = 30_000_000 - unused_space;
+    let mut min_directory_size_to_free = u64::MAX;
+
+    for (_, directory) in directories_by_name
+        .iter()
+        .filter(|(dir_path, _)| *dir_path != "/")
+    {
+        let directory_size = calculate_directory_size(directory, &directories_by_name);
+        if directory_size >= space_left_to_free && min_directory_size_to_free > directory_size {
+            min_directory_size_to_free = directory_size;
+        }
+    }
+
+    println!("{min_directory_size_to_free}");
+}
+
 fn calculate_directory_size(
     directory: &Directory,
     directories_by_name: &HashMap<String, Directory>,
 ) -> u64 {
     let files_size: u64 = directory.files.iter().map(|f| f.size).sum();
 
-    let mut subdirectories_size = 0u64;
+    let mut subdirectories_size = 0;
     for subdirectory_name in &directory.subdirectories {
         let separator = if directory.path == "/" { "" } else { "/" };
         let subdirectory_path = format!("{}{separator}{subdirectory_name}", directory.path);
 
         match &directories_by_name.get(&subdirectory_path) {
-            Some(v) => subdirectories_size += calculate_directory_size(v, directories_by_name),
+            Some(d) => subdirectories_size += calculate_directory_size(d, directories_by_name),
             None => continue,
         }
     }
