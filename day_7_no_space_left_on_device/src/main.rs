@@ -139,7 +139,7 @@ fn read_directories_by_path() -> HashMap<String, Directory> {
         }
     }
 
-    return directories_by_path;
+    directories_by_path
 }
 
 #[allow(dead_code)]
