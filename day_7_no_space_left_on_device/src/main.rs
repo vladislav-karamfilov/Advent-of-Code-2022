@@ -12,7 +12,7 @@ fn solve_puzzle1() {
     const MAX_DIRECTORY_SIZE: u64 = 100_000;
 
     let mut sum_of_target_directories = 0u64;
-    for (_, directory) in directories_by_path.iter().filter(|(path, _)| *path != "/") {
+    for directory in directories_by_path.values().filter(|d| d.path != "/") {
         let directory_size = calculate_directory_size(directory, &directories_by_path);
         if directory_size <= MAX_DIRECTORY_SIZE {
             sum_of_target_directories += directory_size;
@@ -31,7 +31,7 @@ fn solve_puzzle2() {
     let space_left_to_free = 30_000_000 - unused_space;
 
     let mut min_directory_size_to_free = u64::MAX;
-    for (_, directory) in directories_by_path.iter().filter(|(path, _)| *path != "/") {
+    for directory in directories_by_path.values().filter(|d| d.path != "/") {
         let directory_size = calculate_directory_size(directory, &directories_by_path);
         if directory_size >= space_left_to_free && min_directory_size_to_free > directory_size {
             min_directory_size_to_free = directory_size;
