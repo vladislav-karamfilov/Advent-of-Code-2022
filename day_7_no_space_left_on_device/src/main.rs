@@ -68,20 +68,22 @@ fn solve_puzzle2() {
     let mut used_space = 0;
     for (_, directory) in directories_by_path
         .iter()
-        .filter(|(path, _)| !path[1..].contains('/'))
+        .filter(|(path, _)| *path == "/" || !path[1..].contains('/'))
     {
-        used_space +=
-            calculate_directory_size(directory, &directories_by_path, directory.path == "/");
+        let size = calculate_directory_size(directory, &directories_by_path, directory.path == "/");
+        used_space += size;
+        println!("{} - {}", directory.path, size);
     }
 
+    println!("used: {used_space}");
+
     let unused_space = 70_000_000 - used_space;
+    println!("unused: {unused_space}");
+
     let space_left_to_free = 30_000_000 - unused_space;
     let mut min_directory_size_to_free = u64::MAX;
 
-    for (_, directory) in directories_by_path
-        .iter()
-        .filter(|(dir_path, _)| *dir_path != "/")
-    {
+    for (_, directory) in directories_by_path.iter() {
         let directory_size = calculate_directory_size(directory, &directories_by_path, false);
         if directory_size >= space_left_to_free && min_directory_size_to_free > directory_size {
             min_directory_size_to_free = directory_size;
@@ -106,16 +108,12 @@ fn calculate_directory_size(
         let separator = if directory.path == "/" { "" } else { "/" };
         let subdirectory_path = format!("{}{separator}{subdirectory_name}", directory.path);
 
-        // println!("subdir is: {subdirectory_path}");
-
         match &directories_by_path.get(&subdirectory_path) {
             Some(d) => {
                 subdirectories_size += calculate_directory_size(d, directories_by_path, false)
             }
             None => continue,
         }
-
-        // println!("size is: ({subdirectories_size})");
     }
 
     files_size + subdirectories_size
@@ -128,6 +126,7 @@ fn handle_command_line(line: &str, current_directory_path: String) -> String {
 
     if line == "$ cd .." {
         match current_directory_path.rfind('/') {
+            Some(0) => return "/".to_string(),
             Some(i) => return current_directory_path[..i].to_string(),
             None => return current_directory_path,
         }
