@@ -5,8 +5,9 @@ fn main() {
     solve_puzzle2();
 }
 
+#[allow(dead_code)]
 fn solve_puzzle1() {
-    let mut directories_by_name: HashMap<String, Directory> = HashMap::new();
+    let mut directories_by_path: HashMap<String, Directory> = HashMap::new();
     let mut current_directory_path = String::new();
 
     loop {
@@ -24,14 +25,14 @@ fn solve_puzzle1() {
         if line.starts_with('$') {
             current_directory_path = handle_command_line(line, current_directory_path);
         } else {
-            handle_file_entry_line(line, &current_directory_path, &mut directories_by_name);
+            handle_file_entry_line(line, &current_directory_path, &mut directories_by_path);
         }
     }
 
     let mut sum_of_target_directories = 0u64;
 
-    for (_, directory) in directories_by_name.iter() {
-        let directory_size = calculate_directory_size(directory, &directories_by_name);
+    for (_, directory) in directories_by_path.iter() {
+        let directory_size = calculate_directory_size(directory, &directories_by_path, false);
         if directory_size <= 100_000u64 {
             sum_of_target_directories += directory_size;
         }
@@ -40,8 +41,9 @@ fn solve_puzzle1() {
     println!("{sum_of_target_directories}");
 }
 
+#[allow(dead_code)]
 fn solve_puzzle2() {
-    let mut directories_by_name: HashMap<String, Directory> = HashMap::new();
+    let mut directories_by_path: HashMap<String, Directory> = HashMap::new();
     let mut current_directory_path = String::new();
 
     loop {
@@ -59,25 +61,28 @@ fn solve_puzzle2() {
         if line.starts_with('$') {
             current_directory_path = handle_command_line(line, current_directory_path);
         } else {
-            handle_file_entry_line(line, &current_directory_path, &mut directories_by_name);
+            handle_file_entry_line(line, &current_directory_path, &mut directories_by_path);
         }
     }
 
     let mut used_space = 0;
-    for (_, directory) in directories_by_name.iter() {
-        used_space += calculate_directory_size(directory, &directories_by_name);
+    for (_, directory) in directories_by_path
+        .iter()
+        .filter(|(path, _)| !path[1..].contains('/'))
+    {
+        used_space +=
+            calculate_directory_size(directory, &directories_by_path, directory.path == "/");
     }
 
-    println!("{used_space}");
     let unused_space = 70_000_000 - used_space;
     let space_left_to_free = 30_000_000 - unused_space;
     let mut min_directory_size_to_free = u64::MAX;
 
-    for (_, directory) in directories_by_name
+    for (_, directory) in directories_by_path
         .iter()
         .filter(|(dir_path, _)| *dir_path != "/")
     {
-        let directory_size = calculate_directory_size(directory, &directories_by_name);
+        let directory_size = calculate_directory_size(directory, &directories_by_path, false);
         if directory_size >= space_left_to_free && min_directory_size_to_free > directory_size {
             min_directory_size_to_free = directory_size;
         }
@@ -88,19 +93,29 @@ fn solve_puzzle2() {
 
 fn calculate_directory_size(
     directory: &Directory,
-    directories_by_name: &HashMap<String, Directory>,
+    directories_by_path: &HashMap<String, Directory>,
+    skip_subdirectories: bool,
 ) -> u64 {
     let files_size: u64 = directory.files.iter().map(|f| f.size).sum();
+    if skip_subdirectories {
+        return files_size;
+    }
 
     let mut subdirectories_size = 0;
     for subdirectory_name in &directory.subdirectories {
         let separator = if directory.path == "/" { "" } else { "/" };
         let subdirectory_path = format!("{}{separator}{subdirectory_name}", directory.path);
 
-        match &directories_by_name.get(&subdirectory_path) {
-            Some(d) => subdirectories_size += calculate_directory_size(d, directories_by_name),
+        // println!("subdir is: {subdirectory_path}");
+
+        match &directories_by_path.get(&subdirectory_path) {
+            Some(d) => {
+                subdirectories_size += calculate_directory_size(d, directories_by_path, false)
+            }
             None => continue,
         }
+
+        // println!("size is: ({subdirectories_size})");
     }
 
     files_size + subdirectories_size
@@ -131,10 +146,10 @@ fn handle_command_line(line: &str, current_directory_path: String) -> String {
 fn handle_file_entry_line(
     line: &str,
     current_directory_path: &str,
-    directories_by_name: &mut HashMap<String, Directory>,
+    directories_by_path: &mut HashMap<String, Directory>,
 ) {
-    if !directories_by_name.contains_key(current_directory_path) {
-        directories_by_name.insert(
+    if !directories_by_path.contains_key(current_directory_path) {
+        directories_by_path.insert(
             current_directory_path.to_string(),
             Directory {
                 path: current_directory_path.to_string(),
@@ -144,7 +159,7 @@ fn handle_file_entry_line(
         );
     }
 
-    let directory = directories_by_name.get_mut(current_directory_path).unwrap();
+    let directory = directories_by_path.get_mut(current_directory_path).unwrap();
 
     let mut directory_entry_splitter = line.split(' ');
     let entry_first_part = directory_entry_splitter.next().unwrap();
@@ -160,6 +175,7 @@ fn handle_file_entry_line(
     }
 }
 
+#[allow(dead_code)]
 struct File {
     name: String,
     size: u64,
