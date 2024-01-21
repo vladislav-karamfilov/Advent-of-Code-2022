@@ -68,9 +68,8 @@ fn handle_command_line(line: &str, current_directory_path: String) -> String {
 
     if line == "$ cd .." {
         match current_directory_path.rfind('/') {
-            Some(0) => return "/".to_string(),
+            Some(0) | None => return "/".to_string(),
             Some(i) => return current_directory_path[..i].to_string(),
-            None => return current_directory_path,
         }
     }
 
