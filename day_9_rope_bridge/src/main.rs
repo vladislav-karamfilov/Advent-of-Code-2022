@@ -5,9 +5,11 @@ fn main() {
     solve_puzzle1();
 }
 
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let mut head_position = Position { x: 0, y: 0 };
     let mut tail_position = Position { x: 0, y: 0 };
+
     let mut tail_visited_positions = HashSet::new();
     tail_visited_positions.insert(tail_position.clone());
 
@@ -166,13 +168,13 @@ fn simulate_tail_motion(head_position: &Position, tail_position: &Position) -> P
             }
         }
     } else if head_position.x > tail_position.x {
-        // Head is on bottom left diagonal
+        // Head is on bottom right diagonal
         Position {
             x: tail_position.x + 1,
             y: tail_position.y - 1,
         }
     } else {
-        // Head is on bottom right diagonal
+        // Head is on bottom left diagonal
         Position {
             x: tail_position.x - 1,
             y: tail_position.y - 1,
