@@ -37,7 +37,9 @@ fn calculate_tail_visited_positions(knots_count: usize) -> usize {
         let (direction, steps) = line.split_at(2);
 
         let direction = direction.chars().next().unwrap();
-        let steps = steps.parse().expect("Steps must be number");
+        let steps = steps
+            .parse()
+            .unwrap_or_else(|_| panic!("Steps must be number but is: {}", steps));
 
         let motion_result = simulate_motion(
             direction,
@@ -93,7 +95,12 @@ fn simulate_motion(
                 };
             }
 
-            _ => return Err(Error::new(ErrorKind::Other, "Unknown direction")),
+            _ => {
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    format!("Unknown direction: {}", direction),
+                ))
+            }
         }
 
         let mut i = 1;
