@@ -1,6 +1,5 @@
 use std::collections::HashSet;
-use std::fs::{read_to_string, File};
-use std::io::{Error, ErrorKind, Read};
+use std::io::{Error, ErrorKind};
 
 fn main() {
     // solve_puzzle1();
@@ -9,66 +8,16 @@ fn main() {
 
 #[allow(dead_code)]
 fn solve_puzzle2() {
-    let mut knot_positions = [
-        Position { x: 0, y: 0 },
-        Position { x: 0, y: 0 },
-        Position { x: 0, y: 0 },
-        Position { x: 0, y: 0 },
-        Position { x: 0, y: 0 },
-        Position { x: 0, y: 0 },
-        Position { x: 0, y: 0 },
-        Position { x: 0, y: 0 },
-        Position { x: 0, y: 0 },
-        Position { x: 0, y: 0 },
-    ];
-
-    let mut tail_visited_positions = HashSet::new();
-    tail_visited_positions.insert(knot_positions.last().unwrap().clone());
-
-    for line in read_file() {
-        // let mut line = line_raw.to_string();
-
-        // std::io::stdin()
-        //     .read_line(&mut line)
-        //     .expect("Failed to read line");
-
-        let line = line.trim();
-        if line.is_empty() {
-            break;
-        }
-
-        let (direction, steps) = line.split_at(2);
-
-        let direction = direction.chars().next().unwrap();
-        let steps = steps.parse().expect("Steps must be number");
-
-        let motion_result = simulate_motion(
-            direction,
-            steps,
-            &mut knot_positions,
-            &mut tail_visited_positions,
-        );
-
-        match motion_result {
-            Ok(_) => (),
-            Err(err) => panic!("{err}"),
-        }
-    }
-
-    println!("{}", tail_visited_positions.len());
-}
-
-fn read_file() -> Vec<String> {
-    read_to_string("test.txt")
-        .unwrap() // panic on possible file-reading errors
-        .lines() // split the string into an iterator of string slices
-        .map(String::from) // make each slice into a string
-        .collect() // gather them together into a vector
+    println!("{}", calculate_tail_visited_positions(10));
 }
 
 #[allow(dead_code)]
 fn solve_puzzle1() {
-    let mut knot_positions = [Position { x: 0, y: 0 }, Position { x: 0, y: 0 }];
+    println!("{}", calculate_tail_visited_positions(2));
+}
+
+fn calculate_tail_visited_positions(knots_count: usize) -> usize {
+    let mut knot_positions = vec![KnotPosition { x: 0, y: 0 }; knots_count];
 
     let mut tail_visited_positions = HashSet::new();
     tail_visited_positions.insert(knot_positions.last().unwrap().clone());
@@ -103,90 +52,61 @@ fn solve_puzzle1() {
         }
     }
 
-    println!("{}", tail_visited_positions.len());
+    tail_visited_positions.len()
 }
 
 fn simulate_motion(
     direction: char,
     steps: i32,
-    knot_positions: &mut [Position],
-    tail_visited_positions: &mut HashSet<Position>,
+    knot_positions: &mut [KnotPosition],
+    tail_visited_positions: &mut HashSet<KnotPosition>,
 ) -> Result<(), Error> {
     assert!(knot_positions.len() > 1);
 
     for _ in 0..steps {
         match direction {
             'U' => {
-                for i in 0..knot_positions.len() - 1 {
-                    knot_positions[i] = Position {
-                        y: knot_positions[i].y + 1,
-                        ..knot_positions[i]
-                    };
-
-                    if is_tail_touching_head(&knot_positions[i], &knot_positions[i + 1]) {
-                        break;
-                    }
-
-                    knot_positions[i + 1] =
-                        simulate_tail_motion(&knot_positions[i], &knot_positions[i + 1]);
-                }
+                knot_positions[0] = KnotPosition {
+                    y: knot_positions[0].y + 1,
+                    ..knot_positions[0]
+                };
             }
 
             'D' => {
-                for i in 0..knot_positions.len() - 1 {
-                    knot_positions[i] = Position {
-                        y: knot_positions[i].y - 1,
-                        ..knot_positions[i]
-                    };
-
-                    if is_tail_touching_head(&knot_positions[i], &knot_positions[i + 1]) {
-                        break;
-                    }
-
-                    knot_positions[i + 1] =
-                        simulate_tail_motion(&knot_positions[i], &knot_positions[i + 1]);
-                }
+                knot_positions[0] = KnotPosition {
+                    y: knot_positions[0].y - 1,
+                    ..knot_positions[0]
+                };
             }
 
             'L' => {
-                for i in 0..knot_positions.len() - 1 {
-                    knot_positions[i] = Position {
-                        x: knot_positions[i].x - 1,
-                        ..knot_positions[i]
-                    };
-
-                    if is_tail_touching_head(&knot_positions[i], &knot_positions[i + 1]) {
-                        break;
-                    }
-
-                    knot_positions[i + 1] =
-                        simulate_tail_motion(&knot_positions[i], &knot_positions[i + 1]);
-                }
+                knot_positions[0] = KnotPosition {
+                    x: knot_positions[0].x - 1,
+                    ..knot_positions[0]
+                };
             }
 
             'R' => {
-                for i in 0..knot_positions.len() - 1 {
-                    knot_positions[i] = Position {
-                        x: knot_positions[i].x + 1,
-                        ..knot_positions[i]
-                    };
-
-                    if is_tail_touching_head(&knot_positions[i], &knot_positions[i + 1]) {
-                        break;
-                    }
-
-                    knot_positions[i + 1] =
-                        simulate_tail_motion(&knot_positions[i], &knot_positions[i + 1]);
-                }
+                knot_positions[0] = KnotPosition {
+                    x: knot_positions[0].x + 1,
+                    ..knot_positions[0]
+                };
             }
 
             _ => return Err(Error::new(ErrorKind::Other, "Unknown direction")),
         }
 
+        let mut i = 1;
+        while i < knot_positions.len()
+            && !is_tail_touching_head(&knot_positions[i - 1], &knot_positions[i])
+        {
+            knot_positions[i] = simulate_tail_motion(&knot_positions[i - 1], &knot_positions[i]);
+
+            i += 1;
+        }
+
         let new_tail_position = knot_positions.last().unwrap();
         if !tail_visited_positions.contains(new_tail_position) {
-            println!("adding ({}, {})", new_tail_position.x, new_tail_position.y);
-
             tail_visited_positions.insert(new_tail_position.clone());
         }
     }
@@ -194,16 +114,19 @@ fn simulate_motion(
     Ok(())
 }
 
-fn simulate_tail_motion(head_position: &Position, tail_position: &Position) -> Position {
+fn simulate_tail_motion(
+    head_position: &KnotPosition,
+    tail_position: &KnotPosition,
+) -> KnotPosition {
     // On same row
     if head_position.x == tail_position.x {
         return if head_position.y > tail_position.y {
-            Position {
+            KnotPosition {
                 y: head_position.y - 1,
                 ..*head_position
             }
         } else {
-            Position {
+            KnotPosition {
                 y: head_position.y + 1,
                 ..*head_position
             }
@@ -213,12 +136,12 @@ fn simulate_tail_motion(head_position: &Position, tail_position: &Position) -> P
     // On same col
     if head_position.y == tail_position.y {
         return if head_position.x > tail_position.x {
-            Position {
+            KnotPosition {
                 x: head_position.x - 1,
                 ..*head_position
             }
         } else {
-            Position {
+            KnotPosition {
                 x: head_position.x + 1,
                 ..*head_position
             }
@@ -228,33 +151,33 @@ fn simulate_tail_motion(head_position: &Position, tail_position: &Position) -> P
     if head_position.y > tail_position.y {
         if head_position.x > tail_position.x {
             // Head is on upper right diagonal
-            Position {
+            KnotPosition {
                 x: tail_position.x + 1,
                 y: tail_position.y + 1,
             }
         } else {
             // Head is on upper left diagonal
-            Position {
+            KnotPosition {
                 x: tail_position.x - 1,
                 y: tail_position.y + 1,
             }
         }
     } else if head_position.x > tail_position.x {
         // Head is on bottom right diagonal
-        Position {
+        KnotPosition {
             x: tail_position.x + 1,
             y: tail_position.y - 1,
         }
     } else {
         // Head is on bottom left diagonal
-        Position {
+        KnotPosition {
             x: tail_position.x - 1,
             y: tail_position.y - 1,
         }
     }
 }
 
-fn is_tail_touching_head(head_position: &Position, tail_position: &Position) -> bool {
+fn is_tail_touching_head(head_position: &KnotPosition, tail_position: &KnotPosition) -> bool {
     let x_diff = (head_position.x - tail_position.x).abs();
     let y_diff = (head_position.y - tail_position.y).abs();
 
@@ -262,7 +185,7 @@ fn is_tail_touching_head(head_position: &Position, tail_position: &Position) -> 
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
-struct Position {
+struct KnotPosition {
     x: i32,
     y: i32,
 }
