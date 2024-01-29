@@ -37,7 +37,7 @@ fn solve_puzzle2() {
                     result_image.push('.');
                 }
 
-                if drawn_col_position > 0 && drawn_col_position % 39 == 0 {
+                if drawn_col_position == 39 {
                     drawn_col_position = 0;
 
                     result_image.push('\n');
