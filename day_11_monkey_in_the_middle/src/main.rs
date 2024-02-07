@@ -1,15 +1,45 @@
 use std::cmp::Ordering;
 
 fn main() {
-    solve_puzzle1();
+    // solve_puzzle1();
+    solve_puzzle2();
 }
 
+#[allow(dead_code)]
+fn solve_puzzle2() {
+    let mut monkeys = read_monkeys_input();
+
+    let modulo: i64 = monkeys.iter().map(|m| m.test_divisible_by).product();
+
+    let monkey_business_level =
+        calculate_monkey_business_level(&mut monkeys, 10_000, &mut |worry_level| {
+            worry_level % modulo
+        });
+
+    println!("{monkey_business_level}");
+}
+
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let mut monkeys = read_monkeys_input();
 
-    for _ in 0..20 {
+    let monkey_business_level =
+        calculate_monkey_business_level(&mut monkeys, 20, &mut |worry_level| worry_level / 3);
+
+    println!("{monkey_business_level}");
+}
+
+fn calculate_monkey_business_level<F>(
+    monkeys: &mut [Monkey],
+    rounds: i32,
+    reduce_worry_level_fn: &mut F,
+) -> i64
+where
+    F: FnMut(i64) -> i64,
+{
+    for _ in 0..rounds {
         for i in 0..monkeys.len() {
-            execute_monkey_turn(i, &mut monkeys);
+            execute_monkey_turn(i, monkeys, reduce_worry_level_fn);
         }
     }
 
@@ -25,16 +55,22 @@ fn solve_puzzle1() {
         Ordering::Equal
     });
 
-    let monkey_business_level: i32 = monkeys
+    let monkey_business_level = monkeys
         .iter()
         .take(2)
-        .map(|m| m.times_inspected_item)
+        .map(|m| m.times_inspected_item as i64)
         .product();
 
-    println!("{monkey_business_level}");
+    monkey_business_level
 }
 
-fn execute_monkey_turn(monkey_index: usize, monkeys: &mut [Monkey]) {
+fn execute_monkey_turn<F>(
+    monkey_index: usize,
+    monkeys: &mut [Monkey],
+    reduce_worry_level_fn: &mut F,
+) where
+    F: FnMut(i64) -> i64,
+{
     while let Some(item_worry_level) = monkeys[monkey_index].item_worry_levels.pop() {
         let operand = if monkeys[monkey_index].operation_operand == "old" {
             item_worry_level
@@ -48,7 +84,7 @@ fn execute_monkey_turn(monkey_index: usize, monkeys: &mut [Monkey]) {
             OperationType::Multiply => item_worry_level * operand,
         };
 
-        worry_level /= 3;
+        worry_level = reduce_worry_level_fn(worry_level);
 
         let monkey_index_to_throw_to = if worry_level % monkeys[monkey_index].test_divisible_by == 0
         {
