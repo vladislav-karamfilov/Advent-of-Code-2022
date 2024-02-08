@@ -1,6 +1,4 @@
-use std::collections::HashSet;
-
-use priority_queue::PriorityQueue;
+use std::collections::{HashSet, VecDeque};
 
 fn main() {
     solve_puzzle1();
@@ -34,43 +32,34 @@ fn calculate_min_steps_to_destination(
     start_location: (usize, usize),
     destination_location: (usize, usize),
 ) -> i32 {
-    let mut start_square = SquareToVisit {
+    let start_square = SquareToVisit {
         location: start_location,
         steps: 0,
-        estimated_distance_to_destination: 0,
     };
 
-    start_square.set_estimated_distance_to_destination(destination_location);
-
-    let start_square_score = start_square.get_score();
-
-    let mut squares_to_visit = PriorityQueue::new();
-    squares_to_visit.push(start_square, start_square_score);
+    let mut squares_to_visit = VecDeque::new();
+    squares_to_visit.push_back(start_square);
 
     let mut visited = HashSet::new();
-    let mut neighbour_squares_in_queue = HashSet::new();
 
-    while let Some((current_square, _)) = squares_to_visit.pop() {
+    while !squares_to_visit.is_empty() {
+        let current_square = squares_to_visit.pop_front().unwrap();
         if current_square.location == destination_location {
             return current_square.steps;
         }
 
-        visited.insert(current_square.location);
+        if !visited.insert(current_square.location) {
+            continue;
+        }
 
-        let neighbour_squares =
-            get_neighbour_squares(heightmap, &current_square, destination_location);
+        let neighbour_squares = get_neighbour_squares(heightmap, &current_square);
 
         for neighbour_square in neighbour_squares {
-            if visited.contains(&neighbour_square.location)
-                || neighbour_squares_in_queue.contains(&neighbour_square.location)
-            {
+            if visited.contains(&neighbour_square.location) {
                 continue;
             }
 
-            neighbour_squares_in_queue.insert(neighbour_square.location);
-
-            let neighbour_square_score = neighbour_square.get_score();
-            squares_to_visit.push(neighbour_square, neighbour_square_score);
+            squares_to_visit.push_back(neighbour_square);
         }
     }
 
@@ -80,7 +69,6 @@ fn calculate_min_steps_to_destination(
 fn get_neighbour_squares(
     heightmap: &[Vec<u8>],
     current_square: &SquareToVisit,
-    destination_location: (usize, usize),
 ) -> Vec<SquareToVisit> {
     let mut result = vec![];
 
@@ -95,7 +83,6 @@ fn get_neighbour_squares(
         result.push(SquareToVisit {
             location: (current_square.location.0 - 1, current_square.location.1),
             steps: current_square.steps + 1,
-            estimated_distance_to_destination: 0,
         });
     }
 
@@ -107,7 +94,6 @@ fn get_neighbour_squares(
         result.push(SquareToVisit {
             location: (current_square.location.0 + 1, current_square.location.1),
             steps: current_square.steps + 1,
-            estimated_distance_to_destination: 0,
         });
     }
 
@@ -119,7 +105,6 @@ fn get_neighbour_squares(
         result.push(SquareToVisit {
             location: (current_square.location.0, current_square.location.1 - 1),
             steps: current_square.steps + 1,
-            estimated_distance_to_destination: 0,
         });
     }
 
@@ -131,12 +116,7 @@ fn get_neighbour_squares(
         result.push(SquareToVisit {
             location: (current_square.location.0, current_square.location.1 + 1),
             steps: current_square.steps + 1,
-            estimated_distance_to_destination: 0,
         });
-    }
-
-    for neighbour_square in result.iter_mut() {
-        neighbour_square.set_estimated_distance_to_destination(destination_location);
     }
 
     result
@@ -163,21 +143,7 @@ fn read_heightmap() -> Vec<Vec<u8>> {
     result
 }
 
-#[derive(Hash, Eq, PartialEq)]
 struct SquareToVisit {
     location: (usize, usize),
     steps: i32,
-    estimated_distance_to_destination: i32,
-}
-
-impl SquareToVisit {
-    fn get_score(&self) -> i32 {
-        self.estimated_distance_to_destination + self.steps
-    }
-
-    fn set_estimated_distance_to_destination(&mut self, destination: (usize, usize)) {
-        self.estimated_distance_to_destination = (destination.0 as i32 - self.location.0 as i32)
-            .abs()
-            + (destination.1 as i32 - self.location.1 as i32).abs();
-    }
 }
