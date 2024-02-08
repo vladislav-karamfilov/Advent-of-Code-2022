@@ -1,9 +1,46 @@
 use std::collections::{HashSet, VecDeque};
 
 fn main() {
-    solve_puzzle1();
+    // solve_puzzle1();
+    solve_puzzle2();
 }
 
+#[allow(dead_code)]
+fn solve_puzzle2() {
+    let mut heightmap = read_heightmap();
+
+    let start = b'S';
+    let start_row = heightmap.iter().position(|x| x.contains(&start)).unwrap();
+    let start_col = heightmap[start_row]
+        .iter()
+        .position(|x| *x == start)
+        .unwrap();
+
+    heightmap[start_row][start_col] = b'a';
+
+    let mut start_locations = vec![];
+
+    for (row, line) in heightmap.iter().enumerate() {
+        for (col, _) in line.iter().enumerate() {
+            if line[col] == b'a' {
+                start_locations.push((row, col));
+            }
+        }
+    }
+
+    let end = b'E';
+    let end_row = heightmap.iter().position(|x| x.contains(&end)).unwrap();
+    let end_col = heightmap[end_row].iter().position(|x| *x == end).unwrap();
+
+    heightmap[end_row][end_col] = b'z';
+
+    let min_steps =
+        calculate_min_steps_to_destination(&heightmap, &start_locations, (end_row, end_col));
+
+    println!("{min_steps}");
+}
+
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let mut heightmap = read_heightmap();
 
@@ -21,24 +58,27 @@ fn solve_puzzle1() {
     heightmap[start_row][start_col] = b'a';
     heightmap[end_row][end_col] = b'z';
 
-    let min_steps =
-        calculate_min_steps_to_destination(&heightmap, (start_row, start_col), (end_row, end_col));
+    let min_steps = calculate_min_steps_to_destination(
+        &heightmap,
+        &[(start_row, start_col)],
+        (end_row, end_col),
+    );
 
     println!("{min_steps}");
 }
 
 fn calculate_min_steps_to_destination(
     heightmap: &[Vec<u8>],
-    start_location: (usize, usize),
+    start_locations: &[(usize, usize)],
     destination_location: (usize, usize),
 ) -> i32 {
-    let start_square = SquareToVisit {
-        location: start_location,
-        steps: 0,
-    };
-
     let mut squares_to_visit = VecDeque::new();
-    squares_to_visit.push_back(start_square);
+    start_locations.iter().for_each(|l| {
+        squares_to_visit.push_back(SquareToVisit {
+            location: *l,
+            steps: 0,
+        })
+    });
 
     let mut visited = HashSet::new();
 
