@@ -1,14 +1,13 @@
-use std::cmp::Ordering;
+use std::{
+    cmp::{self, Ordering},
+    collections::VecDeque,
+};
 
 fn main() {
     solve_puzzle1();
 }
 
 fn solve_puzzle1() {
-    parse_packet_value("[[1],[2,3,4]]");
-
-    return;
-
     let mut left = None;
     let mut is_reading_pair = true;
 
@@ -35,9 +34,11 @@ fn solve_puzzle1() {
 
         match left {
             Some(left_packet_value) => {
-                let right_packet_value = parse_packet_value(line);
+                let right_packet_value = parse_packet_value(&line[1..line.len() - 1]);
                 if compare_packet_values(&left_packet_value, &right_packet_value) == Ordering::Less
                 {
+                    //println!("{pair_index}");
+
                     sum_of_right_order_indices += pair_index;
                 }
 
@@ -46,7 +47,7 @@ fn solve_puzzle1() {
                 left = None;
             }
             None => {
-                left = Some(parse_packet_value(line));
+                left = Some(parse_packet_value(&line[1..line.len() - 1]));
 
                 is_reading_pair = true;
             }
@@ -57,23 +58,48 @@ fn solve_puzzle1() {
 }
 
 fn parse_packet_value(str: &str) -> PacketValue {
-    if let Ok(integer) = str.parse() {
-        return PacketValue::Integer(integer);
+    if str.is_empty() {
+        return PacketValue::List(vec![]);
+    }
+
+    if !str.contains('[') {
+        return PacketValue::List(
+            str.split(',')
+                .map(|substr| PacketValue::Integer(substr.parse::<i32>().unwrap()))
+                .collect(),
+        );
     }
 
     let mut list = vec![];
 
-    let mut start_index = 0;
+    let mut list_start_indices = VecDeque::new();
+    let mut integer_start_index = -1;
+    let mut is_in_list = false;
+
     for (i, ch) in str.chars().enumerate() {
         if ch == '[' {
-            start_index = i;
+            list_start_indices.push_back(i);
+            is_in_list = true;
         } else if ch == ']' {
-            list.push(parse_packet_value(&str[start_index..i + 1]));
-        } else if ch == ',' {
-            list.push(PacketValue::Integer(str[start_index..i].parse().unwrap()));
-            start_index = 0;
-        } else if start_index == 0 {
-            start_index = i;
+            let start_index = list_start_indices.pop_back().unwrap();
+            list.push(parse_packet_value(&str[start_index + 1..i]));
+            is_in_list = false;
+        } else if !is_in_list {
+            if ch == ',' && integer_start_index > -1 {
+                if let Ok(integer) = str[integer_start_index as usize..i].parse() {
+                    list.push(PacketValue::Integer(integer));
+                }
+
+                integer_start_index = -1;
+            } else if ch.is_ascii_digit() && integer_start_index == -1 {
+                integer_start_index = i as i32;
+            }
+        }
+    }
+
+    if integer_start_index > -1 {
+        if let Ok(integer) = str[integer_start_index as usize..].parse() {
+            list.push(PacketValue::Integer(integer));
         }
     }
 
@@ -96,21 +122,15 @@ fn compare_packet_values(left: &PacketValue, right: &PacketValue) -> Ordering {
             ),
 
             PacketValue::List(right_list) => {
-                if right_list.len() < left_list.len() {
-                    return Ordering::Greater;
-                }
-
-                for i in 0..left_list.len() {
-                    if compare_packet_values(&left_list[i], &right_list[i]) == Ordering::Greater {
-                        return Ordering::Greater;
+                let length = cmp::min(left_list.len(), right_list.len());
+                for i in 0..length {
+                    let compare_result = compare_packet_values(&left_list[i], &right_list[i]);
+                    if compare_result != Ordering::Equal {
+                        return compare_result;
                     }
                 }
 
-                if right_list.len() == left_list.len() {
-                    Ordering::Equal
-                } else {
-                    Ordering::Less
-                }
+                left_list.len().cmp(&right_list.len())
             }
         },
     }
