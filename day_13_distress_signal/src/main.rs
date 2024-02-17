@@ -37,8 +37,6 @@ fn solve_puzzle1() {
                 let right_packet_value = parse_packet_value(&line[1..line.len() - 1]);
                 if compare_packet_values(&left_packet_value, &right_packet_value) == Ordering::Less
                 {
-                    //println!("{pair_index}");
-
                     sum_of_right_order_indices += pair_index;
                 }
 
@@ -74,25 +72,24 @@ fn parse_packet_value(str: &str) -> PacketValue {
 
     let mut list_start_indices = VecDeque::new();
     let mut integer_start_index = -1;
-    let mut is_in_list = false;
 
     for (i, ch) in str.chars().enumerate() {
         if ch == '[' {
             list_start_indices.push_back(i);
-            is_in_list = true;
         } else if ch == ']' {
             let start_index = list_start_indices.pop_back().unwrap();
-            list.push(parse_packet_value(&str[start_index + 1..i]));
-            is_in_list = false;
-        } else if !is_in_list {
-            if ch == ',' && integer_start_index > -1 {
+            if list_start_indices.is_empty() {
+                list.push(parse_packet_value(&str[start_index + 1..i]));
+            }
+        } else if list_start_indices.is_empty() {
+            if ch.is_ascii_digit() && integer_start_index == -1 {
+                integer_start_index = i as i32;
+            } else if ch == ',' && integer_start_index > -1 {
                 if let Ok(integer) = str[integer_start_index as usize..i].parse() {
                     list.push(PacketValue::Integer(integer));
                 }
 
                 integer_start_index = -1;
-            } else if ch.is_ascii_digit() && integer_start_index == -1 {
-                integer_start_index = i as i32;
             }
         }
     }
