@@ -26,12 +26,13 @@ fn solve_puzzle2() {
 
         let line = line.trim();
         if line.is_empty() {
-            if is_last_line_empty {
-                break;
+            match is_last_line_empty {
+                true => break,
+                false => {
+                    is_last_line_empty = true;
+                    continue;
+                }
             }
-
-            is_last_line_empty = true;
-            continue;
         }
 
         packet_values.push(parse_packet_value(&line[1..line.len() - 1]));
