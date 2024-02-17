@@ -8,7 +8,7 @@ fn main() {
 }
 
 fn solve_puzzle1() {
-    let mut left = None;
+    let mut left: Option<PacketValue> = None;
     let mut is_reading_pair = true;
 
     let mut pair_index = 1;
@@ -35,8 +35,7 @@ fn solve_puzzle1() {
         match left {
             Some(left_packet_value) => {
                 let right_packet_value = parse_packet_value(&line[1..line.len() - 1]);
-                if compare_packet_values(&left_packet_value, &right_packet_value) == Ordering::Less
-                {
+                if left_packet_value.cmp(&right_packet_value) == Ordering::Less {
                     sum_of_right_order_indices += pair_index;
                 }
 
@@ -103,37 +102,46 @@ fn parse_packet_value(str: &str) -> PacketValue {
     PacketValue::List(list)
 }
 
-fn compare_packet_values(left: &PacketValue, right: &PacketValue) -> Ordering {
-    match left {
-        PacketValue::Integer(left_integer) => match right {
-            PacketValue::Integer(right_integer) => left_integer.cmp(right_integer),
-            PacketValue::List(_) => compare_packet_values(
-                &PacketValue::List(vec![PacketValue::Integer(*left_integer)]),
-                right,
-            ),
-        },
-        PacketValue::List(left_list) => match right {
-            PacketValue::Integer(right_integer) => compare_packet_values(
-                left,
-                &PacketValue::List(vec![PacketValue::Integer(*right_integer)]),
-            ),
-
-            PacketValue::List(right_list) => {
-                let length = cmp::min(left_list.len(), right_list.len());
-                for i in 0..length {
-                    let compare_result = compare_packet_values(&left_list[i], &right_list[i]);
-                    if compare_result != Ordering::Equal {
-                        return compare_result;
-                    }
-                }
-
-                left_list.len().cmp(&right_list.len())
-            }
-        },
-    }
-}
-
+#[derive(PartialEq, Eq)]
 enum PacketValue {
     Integer(i32),
     List(Vec<PacketValue>),
+}
+
+impl Ord for PacketValue {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self {
+            PacketValue::Integer(left_integer) => match other {
+                PacketValue::Integer(right_integer) => left_integer.cmp(right_integer),
+                PacketValue::List(_) => {
+                    PacketValue::List(vec![PacketValue::Integer(*left_integer)]).cmp(other)
+                }
+            },
+            PacketValue::List(left_list) => match other {
+                PacketValue::Integer(right_integer) => {
+                    self.cmp(&PacketValue::List(vec![PacketValue::Integer(
+                        *right_integer,
+                    )]))
+                }
+
+                PacketValue::List(right_list) => {
+                    let length = cmp::min(left_list.len(), right_list.len());
+                    for i in 0..length {
+                        let compare_result = left_list[i].cmp(&right_list[i]);
+                        if compare_result != Ordering::Equal {
+                            return compare_result;
+                        }
+                    }
+
+                    left_list.len().cmp(&right_list.len())
+                }
+            },
+        }
+    }
+}
+
+impl PartialOrd for PacketValue {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
