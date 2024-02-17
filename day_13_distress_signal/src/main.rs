@@ -4,9 +4,58 @@ use std::{
 };
 
 fn main() {
-    solve_puzzle1();
+    // solve_puzzle1();
+    solve_puzzle2();
 }
 
+#[allow(dead_code)]
+fn solve_puzzle2() {
+    let first_divider_packet = PacketValue::List(vec![PacketValue::Integer(2)]);
+    let second_diviver_packet = PacketValue::List(vec![PacketValue::Integer(6)]);
+
+    let mut packet_values = vec![first_divider_packet.clone(), second_diviver_packet.clone()];
+
+    let mut is_last_line_empty = false;
+
+    loop {
+        let mut line = String::new();
+
+        std::io::stdin()
+            .read_line(&mut line)
+            .expect("Failed to read line");
+
+        let line = line.trim();
+        if line.is_empty() {
+            if is_last_line_empty {
+                break;
+            }
+
+            is_last_line_empty = true;
+            continue;
+        }
+
+        packet_values.push(parse_packet_value(&line[1..line.len() - 1]));
+        is_last_line_empty = false;
+    }
+
+    packet_values.sort();
+
+    let first_divider_index = packet_values
+        .iter()
+        .position(|v| *v == first_divider_packet)
+        .unwrap();
+
+    let second_divider_index = packet_values
+        .iter()
+        .position(|v| *v == second_diviver_packet)
+        .unwrap();
+
+    let decoder_key = (first_divider_index + 1) * (second_divider_index + 1);
+
+    println!("{decoder_key}");
+}
+
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let mut left: Option<PacketValue> = None;
     let mut is_reading_pair = true;
@@ -102,7 +151,7 @@ fn parse_packet_value(str: &str) -> PacketValue {
     PacketValue::List(list)
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 enum PacketValue {
     Integer(i32),
     List(Vec<PacketValue>),
