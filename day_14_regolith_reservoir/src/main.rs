@@ -5,19 +5,50 @@ fn main() {
 fn solve_puzzle1() {
     let mut cave_slice = read_cave_slice();
 
-    let units_of_sand = 0;
+    let mut units_of_sand = 0;
     loop {
-        let mut row = 0;
-        let mut col = 500;
-        // TODO:
+        let (sand_unit_row, sand_unit_col) = perform_sand_unit_fall(&cave_slice, 0, 500);
+        if sand_unit_row >= cave_slice.len() - 1 {
+            break;
+        }
+
+        cave_slice[sand_unit_row][sand_unit_col] = 'o';
+        units_of_sand += 1;
+
+        // print_cave_slice(&cave_slice, 492);
+        // println!();
     }
 
     println!("{units_of_sand}");
 }
 
-fn print_cave_slice(cave_slice: &[Vec<char>]) {
+fn perform_sand_unit_fall(cave_slice: &[Vec<char>], row: usize, col: usize) -> (usize, usize) {
+    if row >= cave_slice.len() {
+        return (row, col);
+    }
+
+    let mut current_row = row;
+    while current_row < cave_slice.len() - 1 && cave_slice[current_row + 1][col] == '.' {
+        current_row += 1;
+    }
+
+    if current_row < cave_slice.len() - 1 {
+        if col > 0 && cave_slice[current_row + 1][col - 1] == '.' {
+            return perform_sand_unit_fall(cave_slice, current_row + 1, col - 1);
+        }
+
+        if col < cave_slice[0].len() - 1 && cave_slice[current_row + 1][col + 1] == '.' {
+            return perform_sand_unit_fall(cave_slice, current_row + 1, col + 1);
+        }
+    }
+
+    (current_row, col)
+}
+
+#[allow(dead_code)]
+fn print_cave_slice(cave_slice: &[Vec<char>], skip: usize) {
     for row in cave_slice {
-        for col in row {
+        for col in row.iter().skip(skip) {
             print!("{col}");
         }
 
@@ -92,17 +123,14 @@ fn resize_cave_slice_if_needed(
 
     let (rows_to_add, overflowed) = target_rows.overflowing_sub(cave_slice.len());
     if !overflowed && rows_to_add > 0 {
-        for _ in 0..rows_to_add {
-            cave_slice.push(vec!['.'; current_cols]);
-        }
+        cave_slice.extend_from_slice(&vec![vec!['.'; current_cols]; rows_to_add]);
     }
 
     let (cols_to_add, overflowed) = target_cols.overflowing_sub(current_cols);
     if !overflowed && cols_to_add > 0 {
+        let cols_to_add = vec!['.'; cols_to_add];
         for row in cave_slice.iter_mut() {
-            for _ in 0..cols_to_add {
-                row.push('.');
-            }
+            row.extend_from_slice(&cols_to_add);
         }
     }
 }
