@@ -1,7 +1,42 @@
 fn main() {
-    solve_puzzle1();
+    // solve_puzzle1();
+    solve_puzzle2();
 }
 
+#[allow(dead_code)]
+fn solve_puzzle2() {
+    let mut cave_slice = read_cave_slice();
+    if cave_slice.is_empty() {
+        println!("0");
+        return;
+    }
+
+    let cols_to_add = vec!['.'; cave_slice[0].len()];
+    for row in cave_slice.iter_mut() {
+        row.extend_from_slice(&cols_to_add);
+    }
+
+    cave_slice.push(vec!['.'; cave_slice[0].len()]);
+    cave_slice.push(vec!['#'; cave_slice[0].len()]);
+
+    let mut units_of_sand = 1;
+    loop {
+        let (sand_unit_row, sand_unit_col) = perform_sand_unit_fall(&cave_slice, 0, 500);
+        if sand_unit_row == 0 && sand_unit_col == 500 {
+            break;
+        }
+
+        cave_slice[sand_unit_row][sand_unit_col] = 'o';
+        units_of_sand += 1;
+
+        // print_cave_slice(&cave_slice, 492);
+        // println!();
+    }
+
+    println!("{units_of_sand}");
+}
+
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let mut cave_slice = read_cave_slice();
 
