@@ -57,6 +57,8 @@ fn read_cave_slice() -> Vec<Vec<char>> {
             None => break,
         };
 
+        resize_cave_slice_if_needed(&mut cave_slice, last_row + 1, last_col + 1);
+
         for (row, col) in rock_paths.iter().skip(1) {
             resize_cave_slice_if_needed(&mut cave_slice, row + 1, col + 1);
 
@@ -78,7 +80,7 @@ fn read_cave_slice() -> Vec<Vec<char>> {
 }
 
 fn resize_cave_slice_if_needed(
-    cave_slice: &mut [Vec<char>],
+    cave_slice: &mut Vec<Vec<char>>,
     target_rows: usize,
     target_cols: usize,
 ) {
@@ -98,7 +100,7 @@ fn resize_cave_slice_if_needed(
     let (cols_to_add, overflowed) = target_cols.overflowing_sub(current_cols);
     if !overflowed && cols_to_add > 0 {
         for row in cave_slice.iter_mut() {
-            for _ in 0..=cols_to_add {
+            for _ in 0..cols_to_add {
                 row.push('.');
             }
         }
