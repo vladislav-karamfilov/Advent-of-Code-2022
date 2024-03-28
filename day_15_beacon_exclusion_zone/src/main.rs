@@ -1,105 +1,93 @@
 use std::collections::HashSet;
 
 fn main() {
-    solve_puzzle1(10);
+    // solve_puzzle1(10);
+    solve_puzzle1(2000000);
 }
 
 fn solve_puzzle1(target_y: i32) {
-    let sensor_and_closes_beacon_coordinates = read_sensor_and_closest_beacon_coordinates();
+    let (sensor_coords, beacon_coords) = read_sensor_and_closest_beacon_coordinates();
 
-    let mut covered_coordinates = vec![];
-    let mut min_x = i32::MAX;
-    let mut max_x = i32::MIN;
-    for (sensor_coord, beacon_coord) in sensor_and_closes_beacon_coordinates {
-        println!("{:?}", sensor_coord);
-        println!("{:?}", beacon_coord);
+    let mut covered_coordinates: HashSet<(i32, i32)> = HashSet::new();
+    for (i, sensor_coord) in sensor_coords.iter().enumerate() {
+        let beacon_coord = beacon_coords[i];
 
-        let manhattan_path_coordinates =
-            get_coordinates_on_manhattan_path(sensor_coord, beacon_coord);
+        let manhattan_distance = calculate_manhattan_distance(*sensor_coord, beacon_coord);
 
-        println!("{}", manhattan_path_coordinates.len());
-
-        covered_coordinates.extend_from_slice(&manhattan_path_coordinates);
-
-        println!("{}", covered_coordinates.len());
-
-        let (sensor_x, _) = sensor_coord;
-        let (beacon_x, _) = beacon_coord;
-        if sensor_x < min_x {
-            min_x = sensor_x;
+        // The whole "manhattan area" won't cross the target Y
+        let min_y = sensor_coord.1.min(beacon_coord.1) - manhattan_distance as i32;
+        let max_y = sensor_coord.1.max(beacon_coord.1) + manhattan_distance as i32;
+        if min_y > target_y || max_y < target_y {
+            continue;
         }
 
-        if beacon_x < min_x {
-            min_x = beacon_x;
-        }
+        let manhattan_area_coordinates =
+            get_coordinates_in_manhattan_area(sensor_coord.0, sensor_coord.1, manhattan_distance);
 
-        if sensor_x > max_x {
-            max_x = sensor_x;
-        }
-
-        if beacon_x > max_x {
-            max_x = beacon_x;
-        }
+        covered_coordinates.extend(&manhattan_area_coordinates);
     }
 
-    let covered_x: HashSet<i32> = HashSet::from_iter(
-        covered_coordinates
+    let covered_x = covered_coordinates
+        .iter()
+        .filter(|coord| {
+            coord.1 == target_y && !sensor_coords.contains(coord) && !beacon_coords.contains(coord)
+        })
+        .count();
+
+    println!("{covered_x}");
+}
+
+fn calculate_manhattan_distance(start: (i32, i32), end: (i32, i32)) -> u32 {
+    start.0.abs_diff(end.0) + start.1.abs_diff(end.1)
+}
+
+fn get_coordinates_in_manhattan_area(
+    start_x: i32,
+    start_y: i32,
+    manhattan_distance: u32,
+) -> Vec<(i32, i32)> {
+    let mut result = Vec::with_capacity(4 * manhattan_distance as usize);
+
+    let manhattan_distance = manhattan_distance as i32;
+
+    // Approach: https://stackoverflow.com/questions/75128474/how-to-generate-all-of-the-coordinates-that-are-within-a-manhattan-distance-r-of#answer-75129338
+    for offset in 0..manhattan_distance {
+        let inverse_offset = manhattan_distance - offset;
+        result.push((start_x + offset, start_y + inverse_offset));
+        result.push((start_x + inverse_offset, start_y - offset));
+        result.push((start_x - offset, start_y - inverse_offset));
+        result.push((start_x - inverse_offset, start_y + offset));
+    }
+
+    let min_y = result.iter().map(|coord| coord.1).min().unwrap();
+    let max_y = result.iter().map(|coord| coord.1).max().unwrap();
+
+    // Fill in the star-like shape
+    for y in min_y + 1..max_y {
+        let min_x = result
             .iter()
-            .filter(|coord| coord.1 == target_y)
-            .map(|coord| coord.0),
-    );
+            .filter(|coord| coord.1 == y)
+            .map(|coord| coord.0)
+            .min()
+            .unwrap();
 
-    let mut uncovered_count = 0;
-    for x in min_x..=max_x {
-        if !covered_x.contains(&x) {
-            uncovered_count += 1;
+        let max_x = result
+            .iter()
+            .filter(|coord| coord.1 == y)
+            .map(|coord| coord.0)
+            .max()
+            .unwrap();
+
+        for x in min_x + 1..max_x {
+            result.push((x, y));
         }
     }
 
-    println!("{uncovered_count}");
+    result
 }
 
-// TODO: https://stackoverflow.com/questions/75128474/how-to-generate-all-of-the-coordinates-that-are-within-a-manhattan-distance-r-of
-fn get_coordinates_on_manhattan_path(start: (i32, i32), end: (i32, i32)) -> Vec<(i32, i32)> {
-    let mut coordinates = vec![];
-
-    let (x1, y1) = start;
-    let (x2, y2) = end;
-
-    let dx = (x2 - x1).signum();
-    let dy = (y2 - y1).signum();
-
-    let mut x = x1;
-    let mut y = y1;
-
-    while x != x2 || y != y2 {
-        coordinates.push((x, y));
-
-        let next_x = x + dx;
-        let next_y = y + dy;
-
-        let dist_x = (next_x - x2).abs();
-        let dist_y = (next_y - y2).abs();
-
-        if dist_x == 0 && dist_y == 0 {
-            break;
-        }
-
-        if dist_x < dist_y {
-            x = next_x;
-        } else {
-            y = next_y;
-        }
-    }
-
-    // Add the end coordinate
-    coordinates.push((x2, y2));
-
-    coordinates
-}
-
-fn read_sensor_and_closest_beacon_coordinates() -> Vec<((i32, i32), (i32, i32))> {
-    let mut result = vec![];
+fn read_sensor_and_closest_beacon_coordinates() -> (Vec<(i32, i32)>, Vec<(i32, i32)>) {
+    let mut result = (vec![], vec![]);
 
     loop {
         let mut line = String::new();
@@ -137,7 +125,8 @@ fn read_sensor_and_closest_beacon_coordinates() -> Vec<((i32, i32), (i32, i32))>
             .parse::<i32>()
             .unwrap();
 
-        result.push(((sensor_x, sensor_y), (beacon_x, beacon_y)));
+        result.0.push((sensor_x, sensor_y));
+        result.1.push((beacon_x, beacon_y));
     }
 
     result
