@@ -1,45 +1,51 @@
 fn main() {
-    solve_puzzle1(10);
-    // solve_puzzle1(2000000);
+    // solve_puzzle1(10);
+    // solve_puzzle1(2_000_000);
+
+    // solve_puzzle2(20);
+    solve_puzzle2(4_000_000);
 }
 
+#[allow(dead_code)]
+fn solve_puzzle2(max_coord_value: i64) {
+    let (sensor_coords, beacon_coords) = read_sensor_and_closest_beacon_coordinates();
+
+    let all_covered_areas = calculate_all_covered_areas(&sensor_coords, &beacon_coords);
+
+    for y in 0..=max_coord_value {
+        for x in 0..=max_coord_value {
+            let coord = Coordinate2D { x, y };
+            if sensor_coords.contains(&coord)
+                || beacon_coords.contains(&coord)
+                || is_coordinate_inside_covered_area_or_on_border(coord, &all_covered_areas)
+            {
+                continue;
+            }
+
+            println!("{:?}", coord);
+            println!("{}", x * 4_000_000 + y);
+            return;
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn solve_puzzle1(target_y: i64) {
     let (sensor_coords, beacon_coords) = read_sensor_and_closest_beacon_coordinates();
 
-    let mut min_x = i64::MAX;
-    let mut max_x = i64::MIN;
-    let mut all_covered_areas = vec![];
+    let all_covered_areas = calculate_all_covered_areas(&sensor_coords, &beacon_coords);
 
-    for (i, sensor_coord) in sensor_coords.iter().enumerate() {
-        let beacon_coord = beacon_coords[i];
+    let min_x = all_covered_areas
+        .iter()
+        .flat_map(|coords| coords.iter().map(|coord| coord.x))
+        .min()
+        .unwrap();
 
-        let manhattan_distance = calculate_manhattan_distance(*sensor_coord, beacon_coord);
-
-        let covered_area_vertices =
-            calculate_covered_area_vertices(*sensor_coord, manhattan_distance);
-
-        let min_covered_x = covered_area_vertices
-            .iter()
-            .map(|coord| coord.x)
-            .min()
-            .unwrap();
-
-        if min_x > min_covered_x {
-            min_x = min_covered_x;
-        }
-
-        let max_covered_x = covered_area_vertices
-            .iter()
-            .map(|coord| coord.x)
-            .max()
-            .unwrap();
-
-        if max_x < max_covered_x {
-            max_x = max_covered_x;
-        }
-
-        all_covered_areas.push(covered_area_vertices);
-    }
+    let max_x = all_covered_areas
+        .iter()
+        .flat_map(|coords| coords.iter().map(|coord| coord.x))
+        .max()
+        .unwrap();
 
     let mut covered_x_count = 0;
 
@@ -49,9 +55,7 @@ fn solve_puzzle1(target_y: i64) {
             continue;
         }
 
-        if is_coordinate_on_covered_area_border(coord, &all_covered_areas)
-            || is_coordinate_inside_covered_area(coord, &all_covered_areas)
-        {
+        if is_coordinate_inside_covered_area_or_on_border(coord, &all_covered_areas) {
             covered_x_count += 1;
         }
     }
@@ -59,25 +63,23 @@ fn solve_puzzle1(target_y: i64) {
     println!("{covered_x_count}");
 }
 
-fn is_coordinate_on_covered_area_border(
-    coord: Coordinate2D,
-    all_covered_areas: &[Vec<Coordinate2D>],
-) -> bool {
-    for covered_area_vertices in all_covered_areas {
-        let mut i = 0;
-        let mut j = covered_area_vertices.len() - 1;
+fn calculate_all_covered_areas(
+    sensor_coords: &[Coordinate2D],
+    beacon_coords: &[Coordinate2D],
+) -> Vec<Vec<Coordinate2D>> {
+    let mut all_covered_areas = vec![];
+    for (i, sensor_coord) in sensor_coords.iter().enumerate() {
+        let beacon_coord = beacon_coords[i];
 
-        while i < covered_area_vertices.len() {
-            if is_coordinate_on_segment(coord, covered_area_vertices[i], covered_area_vertices[j]) {
-                return true;
-            }
+        let manhattan_distance = calculate_manhattan_distance(*sensor_coord, beacon_coord);
 
-            j = i;
-            i += 1;
-        }
+        let covered_area_vertices =
+            calculate_covered_area_vertices(*sensor_coord, manhattan_distance);
+
+        all_covered_areas.push(covered_area_vertices);
     }
 
-    false
+    all_covered_areas
 }
 
 fn is_coordinate_on_segment(coord: Coordinate2D, start: Coordinate2D, end: Coordinate2D) -> bool {
@@ -90,8 +92,7 @@ fn calculate_distance_between_coordinates(a: Coordinate2D, b: Coordinate2D) -> f
     ((a.x - b.x).pow(2) as f64 + (a.y - b.y).pow(2) as f64).sqrt()
 }
 
-// Approach: Point Inclusion in Polygon (https://wrfranklin.org/Research/Short_Notes/pnpoly.html)
-fn is_coordinate_inside_covered_area(
+fn is_coordinate_inside_covered_area_or_on_border(
     coord: Coordinate2D,
     all_covered_areas: &[Vec<Coordinate2D>],
 ) -> bool {
@@ -101,6 +102,11 @@ fn is_coordinate_inside_covered_area(
         let mut j = covered_area_vertices.len() - 1;
 
         while i < covered_area_vertices.len() {
+            if is_coordinate_on_segment(coord, covered_area_vertices[i], covered_area_vertices[j]) {
+                return true; // On border
+            }
+
+            // Approach: Point Inclusion in Polygon (https://wrfranklin.org/Research/Short_Notes/pnpoly.html)
             if (covered_area_vertices[i].y > coord.y) != (covered_area_vertices[j].y > coord.y)
                 && coord.x
                     < (covered_area_vertices[j].x - covered_area_vertices[i].x)
@@ -128,7 +134,7 @@ fn calculate_manhattan_distance(start: Coordinate2D, end: Coordinate2D) -> u64 {
 }
 
 fn calculate_covered_area_vertices(
-    start_coord: Coordinate2D,
+    sensor_coord: Coordinate2D,
     manhattan_distance: u64,
 ) -> Vec<Coordinate2D> {
     let mut result = Vec::with_capacity(4);
@@ -136,23 +142,23 @@ fn calculate_covered_area_vertices(
     // Approach: https://stackoverflow.com/questions/75128474/how-to-generate-all-of-the-coordinates-that-are-within-a-manhattan-distance-r-of#answer-75129338
     let max_offset = manhattan_distance as i64;
     result.push(Coordinate2D {
-        x: start_coord.x + max_offset,
-        y: start_coord.y,
+        x: sensor_coord.x + max_offset,
+        y: sensor_coord.y,
     });
 
     result.push(Coordinate2D {
-        x: start_coord.x,
-        y: start_coord.y - max_offset,
+        x: sensor_coord.x,
+        y: sensor_coord.y - max_offset,
     });
 
     result.push(Coordinate2D {
-        x: start_coord.x - max_offset,
-        y: start_coord.y,
+        x: sensor_coord.x - max_offset,
+        y: sensor_coord.y,
     });
 
     result.push(Coordinate2D {
-        x: start_coord.x,
-        y: start_coord.y + max_offset,
+        x: sensor_coord.x,
+        y: sensor_coord.y + max_offset,
     });
 
     result
