@@ -13,13 +13,25 @@ fn solve_puzzle2(max_coord_value: i64) {
     let all_covered_areas = calculate_all_covered_areas(&sensor_coords, &beacon_coords);
 
     for y in 0..=max_coord_value {
-        for x in 0..=max_coord_value {
+        let mut x = 0;
+        while x <= max_coord_value {
             let coord = Coordinate2D { x, y };
-            if sensor_coords.contains(&coord)
-                || beacon_coords.contains(&coord)
-                || is_coordinate_inside_covered_area_or_on_border(coord, &all_covered_areas)
-            {
-                continue;
+
+            match get_covered_area_vertices_for_coordinate(coord, &all_covered_areas) {
+                Some(covered_area_vertices) => {
+                    match calculate_new_x_to_jump_to(covered_area_vertices, y) {
+                        Some(new_x) => x = new_x,
+                        None => x += 1,
+                    }
+
+                    continue;
+                }
+                None => {
+                    if sensor_coords.contains(&coord) || beacon_coords.contains(&coord) {
+                        x += 1;
+                        continue;
+                    }
+                }
             }
 
             println!("{:?}", coord);
@@ -55,12 +67,67 @@ fn solve_puzzle1(target_y: i64) {
             continue;
         }
 
-        if is_coordinate_inside_covered_area_or_on_border(coord, &all_covered_areas) {
+        if get_covered_area_vertices_for_coordinate(coord, &all_covered_areas).is_some() {
             covered_x_count += 1;
         }
     }
 
     println!("{covered_x_count}");
+}
+
+fn calculate_new_x_to_jump_to(covered_area_vertices: &[Coordinate2D], y_coord: i64) -> Option<i64> {
+    // The covered area vertices form a diamond-like shape => find the X of the intersection point of
+    // the segments on the right-hand side of the diamond-like shape and a line with Y = y_coord.
+    let vertice_with_max_x = covered_area_vertices
+        .iter()
+        .max_by(|a, b| a.x.cmp(&b.x))
+        .unwrap();
+
+    let vertice_with_min_y = covered_area_vertices
+        .iter()
+        .min_by(|a, b| a.y.cmp(&b.y))
+        .unwrap();
+
+    let vertice_with_max_y = covered_area_vertices
+        .iter()
+        .max_by(|a, b| a.y.cmp(&b.y))
+        .unwrap();
+
+    if let Some(x_intersection) = calculate_x_coordinate_of_segment_intersection_with_line(
+        *vertice_with_min_y,
+        *vertice_with_max_x,
+        y_coord,
+    ) {
+        return Some(x_intersection + 1);
+    }
+
+    if let Some(x_intersection) = calculate_x_coordinate_of_segment_intersection_with_line(
+        *vertice_with_max_y,
+        *vertice_with_max_x,
+        y_coord,
+    ) {
+        return Some(x_intersection + 1);
+    }
+
+    None
+}
+
+fn calculate_x_coordinate_of_segment_intersection_with_line(
+    segment_start: Coordinate2D,
+    segment_end: Coordinate2D,
+    line_y_coord: i64,
+) -> Option<i64> {
+    let x_intersection = segment_start.x
+        + (line_y_coord - segment_start.y) * (segment_end.x - segment_start.x)
+            / (segment_end.y - segment_start.y);
+
+    if x_intersection >= segment_start.x.min(segment_end.x)
+        && x_intersection <= segment_start.x.max(segment_end.x)
+    {
+        Some(x_intersection)
+    } else {
+        None
+    }
 }
 
 fn calculate_all_covered_areas(
@@ -92,18 +159,18 @@ fn calculate_distance_between_coordinates(a: Coordinate2D, b: Coordinate2D) -> f
     ((a.x - b.x).pow(2) as f64 + (a.y - b.y).pow(2) as f64).sqrt()
 }
 
-fn is_coordinate_inside_covered_area_or_on_border(
+fn get_covered_area_vertices_for_coordinate(
     coord: Coordinate2D,
     all_covered_areas: &[Vec<Coordinate2D>],
-) -> bool {
+) -> Option<&Vec<Coordinate2D>> {
     for covered_area_vertices in all_covered_areas {
-        let mut inside = false;
+        let mut inside_area = false;
         let mut i = 0;
         let mut j = covered_area_vertices.len() - 1;
 
         while i < covered_area_vertices.len() {
             if is_coordinate_on_segment(coord, covered_area_vertices[i], covered_area_vertices[j]) {
-                return true; // On border
+                return Some(covered_area_vertices); // On covered area border
             }
 
             // Approach: Point Inclusion in Polygon (https://wrfranklin.org/Research/Short_Notes/pnpoly.html)
@@ -114,19 +181,19 @@ fn is_coordinate_inside_covered_area_or_on_border(
                         / (covered_area_vertices[j].y - covered_area_vertices[i].y)
                         + covered_area_vertices[i].x
             {
-                inside = !inside;
+                inside_area = !inside_area;
             }
 
             j = i;
             i += 1;
         }
 
-        if inside {
-            return true;
+        if inside_area {
+            return Some(covered_area_vertices);
         }
     }
 
-    false
+    None
 }
 
 fn calculate_manhattan_distance(start: Coordinate2D, end: Coordinate2D) -> u64 {
