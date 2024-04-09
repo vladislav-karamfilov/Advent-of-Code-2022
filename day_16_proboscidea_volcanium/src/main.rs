@@ -7,93 +7,76 @@ fn main() {
 fn solve_puzzle1() {
     let network = read_network();
 
-    let mut opened_valves = HashSet::new();
-    let mut released_pressures = HashSet::new();
+    let mut states = vec![];
+    states.push((1, "AA".to_string(), 0 as u32, HashSet::new()));
 
-    let mut cache = HashSet::new();
+    let mut cache = HashMap::new();
 
-    open_valves(
-        0,
-        &network["AA"],
-        &network,
-        30,
-        &mut opened_valves,
-        &mut released_pressures,
-        &mut cache,
-    );
+    let mut max_released_pressure = 0 as u32;
 
-    let most_released_pressure = released_pressures.iter().max().unwrap();
+    while !states.is_empty() {
+        let (current_time, current_valve_label, current_pressure, mut opened_valves) =
+            states.pop().unwrap();
 
-    println!("{most_released_pressure}");
-}
+        match cache.get(&(current_time, current_valve_label.clone())) {
+            Some(cached_pressure) => {
+                if *cached_pressure >= current_pressure {
+                    continue;
+                }
+            }
+            None => {}
+        }
 
-fn open_valves(
-    current_released_pressure: u32,
-    current_valve: &Valve,
-    network: &HashMap<String, Valve>,
-    remaining_minutes: u32,
-    opened_valves: &mut HashSet<String>,
-    released_pressures: &mut HashSet<u32>,
-    cache: &mut HashSet<String>,
-) {
-    if remaining_minutes <= 1
-        || opened_valves.len() == network.iter().filter(|(_, v)| v.flow_rate > 0).count()
-    {
-        released_pressures.insert(current_released_pressure);
-        return;
-    }
-
-    let params = format!(
-        "{} | {} | {} | {} | {}",
-        current_released_pressure,
-        &current_valve.label,
-        remaining_minutes,
-        &opened_valves
-            .clone()
-            .into_iter()
-            .collect::<Vec<String>>()
-            .join(", "),
-        &released_pressures
-            .iter()
-            .map(|f| f.to_string())
-            .collect::<Vec<String>>()
-            .join(", ")
-    );
-
-    if !cache.insert(params.clone()) {
-        println!("{params}");
-        panic!("asd");
-    }
-
-    if !opened_valves.contains(&current_valve.label) && current_valve.flow_rate > 0 {
-        let new_released_pressure =
-            current_released_pressure + current_valve.flow_rate * (remaining_minutes - 1);
-        opened_valves.insert(current_valve.label.clone());
-
-        open_valves(
-            new_released_pressure,
-            current_valve,
-            network,
-            remaining_minutes - 1,
-            opened_valves,
-            released_pressures,
-            cache,
+        cache.insert(
+            (current_time, current_valve_label.clone()),
+            current_pressure,
         );
 
-        opened_valves.remove(&current_valve.label);
+        if current_time == 30 {
+            max_released_pressure = max_released_pressure.max(current_pressure);
+            continue;
+        }
+
+        let current_valve = &network[&current_valve_label];
+
+        // Try opening the valve
+        if current_valve.flow_rate > 0 && !opened_valves.contains(&current_valve.label) {
+            opened_valves.insert(current_valve.label.clone());
+
+            let new_pressure = current_pressure
+                + opened_valves
+                    .iter()
+                    .map(|v| network[v].flow_rate)
+                    .sum::<u32>();
+
+            states.push((
+                current_time + 1,
+                current_valve.label.clone(),
+                new_pressure,
+                opened_valves.clone(),
+            ));
+
+            opened_valves.remove(&current_valve.label);
+        }
+
+        // Try moving to connected valves
+        let new_pressure = current_pressure
+            + opened_valves
+                .iter()
+                .map(|v| network[v].flow_rate)
+                .sum::<u32>();
+
+        for connected_valve in &current_valve.connected_valves {
+            states.push((
+                current_time + 1,
+                connected_valve.clone(),
+                new_pressure,
+                opened_valves.clone(),
+            ));
+        }
     }
 
-    for connected_valve in &current_valve.connected_valves {
-        open_valves(
-            current_released_pressure,
-            &network[connected_valve],
-            network,
-            remaining_minutes - 1,
-            opened_valves,
-            released_pressures,
-            cache,
-        );
-    }
+    println!("{max_released_pressure}");
 }
 
 fn read_network() -> HashMap<String, Valve> {
