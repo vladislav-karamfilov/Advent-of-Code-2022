@@ -8,23 +8,19 @@ fn solve_puzzle1() {
     let network = read_network();
 
     let mut states = vec![];
-    states.push((1, "AA".to_string(), 0 as u32, HashSet::new()));
+    states.push((1, "AA".to_string(), 0_u32, HashSet::new()));
 
     let mut cache = HashMap::new();
 
-    let mut max_released_pressure = 0 as u32;
+    let mut max_released_pressure = 0_u32;
 
-    while !states.is_empty() {
-        let (current_time, current_valve_label, current_pressure, mut opened_valves) =
-            states.pop().unwrap();
-
-        match cache.get(&(current_time, current_valve_label.clone())) {
-            Some(cached_pressure) => {
-                if *cached_pressure >= current_pressure {
-                    continue;
-                }
+    while let Some((current_time, current_valve_label, current_pressure, mut opened_valves)) =
+        states.pop()
+    {
+        if let Some(cached_pressure) = cache.get(&(current_time, current_valve_label.clone())) {
+            if *cached_pressure >= current_pressure {
+                continue;
             }
-            None => {}
         }
 
         cache.insert(
