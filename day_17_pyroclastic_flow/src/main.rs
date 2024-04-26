@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 fn main() {
     solve_puzzle1();
 }
@@ -38,68 +40,41 @@ fn solve_puzzle1() {
         ],
     ];
 
-    // let mut line = String::new();
+    let mut line = String::new();
 
-    // std::io::stdin()
-    //     .read_line(&mut line)
-    //     .expect("Failed to read line");
-
-    let line = ">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>";
+    std::io::stdin()
+        .read_line(&mut line)
+        .expect("Failed to read line");
 
     let jet_pattern = line.trim();
 
     let mut jet_pattern_index = 0usize;
-    let mut stopped_rocks: Vec<Rock> = vec![];
+    let mut filled_coords = HashSet::new();
 
-    for i in 0..22usize {
+    for i in 0..2022usize {
         let rock_shape_offset_coords =
             &rock_shapes_offset_coords[i % rock_shapes_offset_coords.len()];
 
         perform_rock_falling(
             rock_shape_offset_coords,
-            &mut stopped_rocks,
+            &mut filled_coords,
             jet_pattern,
             &mut jet_pattern_index,
         );
     }
 
-    for row in (0..220).rev() {
-        print!("|.");
-        for col in 0..7 {
-            if stopped_rocks
-                .iter()
-                .any(|r| r.coords.iter().any(|c| c.x == col && c.y == row))
-            {
-                print!("#");
-            } else {
-                print!(".");
-            }
-        }
-
-        print!("|");
-        println!();
-    }
-
-    let tower_height = stopped_rocks
-        .iter()
-        .flat_map(|r| r.coords.iter().map(|c| c.y))
-        .max()
-        .unwrap()
-        + 1;
+    let tower_height = filled_coords.iter().map(|c| c.y).max().unwrap() + 1;
 
     println!("{tower_height}");
 }
 
 fn perform_rock_falling(
     rock_shape_offset_coords: &Vec<Coordinate2D>,
-    stopped_rocks: &mut Vec<Rock>,
+    filled_coords: &mut HashSet<Coordinate2D>,
     jet_pattern: &str,
     jet_pattern_index: &mut usize,
 ) {
-    let max_y: Option<usize> = stopped_rocks
-        .iter()
-        .flat_map(|r| r.coords.iter().map(|c| c.y))
-        .max();
+    let max_y = filled_coords.iter().map(|c| c.y).max();
 
     let mut rock = Rock {
         coords: rock_shape_offset_coords
@@ -119,7 +94,7 @@ fn perform_rock_falling(
 
     *jet_pattern_index = (*jet_pattern_index + 1) % jet_pattern.len();
 
-    while move_rock_in_direction(&mut rock, direction, stopped_rocks) {
+    while move_rock_in_direction(&mut rock, direction, filled_coords) {
         // Calculate new direction for next move
         direction = if direction == Direction::Down {
             let next_direction = if jet_pattern.chars().nth(*jet_pattern_index).unwrap() == '<' {
@@ -136,23 +111,23 @@ fn perform_rock_falling(
         };
     }
 
-    stopped_rocks.push(rock);
+    for coord in rock.coords {
+        filled_coords.insert(coord);
+    }
 }
 
 fn move_rock_in_direction(
     rock: &mut Rock,
     direction: Direction,
-    stopped_rocks: &Vec<Rock>,
+    filled_coords: &HashSet<Coordinate2D>,
 ) -> bool {
     match direction {
         Direction::Down => {
-            let min_rock_y = rock.get_min_y();
-            if min_rock_y == 0
-                || stopped_rocks.iter().any(|r| {
-                    r.coords
-                        .iter()
-                        .any(|c| c.y == min_rock_y - 1 && rock.coords.iter().any(|rc| rc.x == c.x))
-                })
+            if rock.get_min_y() == 0
+                || rock
+                    .coords
+                    .iter()
+                    .any(|c| filled_coords.contains(&Coordinate2D { x: c.x, y: c.y - 1 }))
             {
                 return false;
             }
@@ -164,13 +139,11 @@ fn move_rock_in_direction(
             true
         }
         Direction::Left => {
-            let min_rock_x = rock.get_min_x();
-            if min_rock_x > 0
-                && !stopped_rocks.iter().any(|r| {
-                    r.coords
-                        .iter()
-                        .any(|c| c.x == min_rock_x - 1 && rock.coords.iter().any(|rc| rc.y == c.y))
-                })
+            if rock.get_min_x() > 0
+                && !rock
+                    .coords
+                    .iter()
+                    .any(|c| filled_coords.contains(&Coordinate2D { x: c.x - 1, y: c.y }))
             {
                 for coord in rock.coords.iter_mut() {
                     coord.x -= 1;
@@ -180,13 +153,11 @@ fn move_rock_in_direction(
             true
         }
         Direction::Right => {
-            let max_rock_x = rock.get_max_x();
-            if max_rock_x < 6
-                && !stopped_rocks.iter().any(|r| {
-                    r.coords
-                        .iter()
-                        .any(|c| c.x == max_rock_x + 1 && rock.coords.iter().any(|rc| rc.y == c.y))
-                })
+            if rock.get_max_x() < 6
+                && !rock
+                    .coords
+                    .iter()
+                    .any(|c| filled_coords.contains(&Coordinate2D { x: c.x + 1, y: c.y }))
             {
                 for coord in rock.coords.iter_mut() {
                     coord.x += 1;
@@ -205,6 +176,7 @@ enum Direction {
     Right,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 struct Coordinate2D {
     x: usize,
     y: usize,
