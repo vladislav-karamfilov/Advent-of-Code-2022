@@ -1,7 +1,32 @@
 fn main() {
-    solve_puzzle1();
+    // solve_puzzle1();
+    solve_puzzle2();
 }
 
+fn solve_puzzle2() {
+    let mut numbers = read_input_numbers();
+
+    for number in numbers.iter_mut() {
+        number.value *= 811589153;
+    }
+
+    for _ in 0..10 {
+        mix_numbers(&mut numbers);
+    }
+
+    let zero_position = numbers.iter().position(|n| n.value == 0).unwrap();
+
+    let first_grove_coordinate = numbers[(zero_position + 1000) % numbers.len()].value;
+    let second_grove_coordinate = numbers[(zero_position + 2000) % numbers.len()].value;
+    let third_grove_coordinate = numbers[(zero_position + 3000) % numbers.len()].value;
+
+    let sum_of_grove_coordinates =
+        first_grove_coordinate + second_grove_coordinate + third_grove_coordinate;
+
+    println!("{sum_of_grove_coordinates}");
+}
+
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let mut numbers = read_input_numbers();
 
@@ -32,36 +57,45 @@ fn mix_numbers(numbers: &mut Vec<Number>) {
             continue;
         }
 
-        let mut from = current_position;
-        let move_forward = value > 0;
-        let move_iterations = value.abs();
-        for _ in 0..move_iterations {
-            if move_forward {
-                if from == numbers_count - 1 {
-                    let number = numbers.remove(from);
-                    numbers.insert(0, number);
-
-                    from = 0;
-                }
-
-                let to = from + 1;
-                numbers.swap(from, to);
-
-                from = to;
-            } else {
-                if from == 0 {
-                    let number = numbers.remove(0);
-                    numbers.push(number);
-
-                    from = numbers_count - 1;
-                }
-
-                let to = from - 1;
-                numbers.swap(from, to);
-
-                from = to;
-            }
+        let mut new_position = (current_position as i64 + value) % (numbers_count as i64 - 1);
+        if new_position < 0 {
+            new_position = numbers_count as i64 + new_position - 1;
         }
+
+        let number = numbers.remove(current_position);
+        numbers.insert(new_position as usize, number);
+
+        // Naive solution
+        // let mut from = current_position;
+        // let move_forward = value > 0;
+        // let move_iterations = value.abs();
+        // for _ in 0..move_iterations {
+        //     if move_forward {
+        //         if from == numbers_count - 1 {
+        //             let number = numbers.remove(from);
+        //             numbers.insert(0, number);
+
+        //             from = 0;
+        //         }
+
+        //         let to = from + 1;
+        //         numbers.swap(from, to);
+
+        //         from = to;
+        //     } else {
+        //         if from == 0 {
+        //             let number = numbers.remove(0);
+        //             numbers.push(number);
+
+        //             from = numbers_count - 1;
+        //         }
+
+        //         let to = from - 1;
+        //         numbers.swap(from, to);
+
+        //         from = to;
+        //     }
+        // }
     }
 }
 
@@ -91,6 +125,6 @@ fn read_input_numbers() -> Vec<Number> {
 
 #[derive(Clone)]
 struct Number {
-    value: i32,
+    value: i64,
     initial_position: usize,
 }
