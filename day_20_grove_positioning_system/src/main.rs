@@ -3,6 +3,7 @@ fn main() {
     solve_puzzle2();
 }
 
+#[allow(dead_code)]
 fn solve_puzzle2() {
     let mut numbers = read_input_numbers();
 

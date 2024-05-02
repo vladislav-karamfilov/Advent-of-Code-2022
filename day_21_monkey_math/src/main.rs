@@ -4,6 +4,7 @@ fn main() {
     solve_puzzle1();
 }
 
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let monkey_jobs = read_monkey_jobs();
 

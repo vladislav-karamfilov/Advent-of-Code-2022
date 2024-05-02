@@ -4,6 +4,7 @@ fn main() {
     solve_puzzle1();
 }
 
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let rock_shapes_offset_coords = [
         vec![
