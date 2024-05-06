@@ -67,7 +67,7 @@ fn solve_puzzle1() {
     println!("{min_steps}");
 }
 
-// Implementation of A* search algorithm: https://en.wikipedia.org/wiki/A*_search_algorithm
+// Implementation of BFS
 fn calculate_min_steps_to_destination(
     heightmap: &[Vec<u8>],
     start_locations: &[(usize, usize)],
