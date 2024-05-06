@@ -10,7 +10,7 @@ fn main() {
 }
 
 fn solve_puzzle1() {
-    let map = read_map_of_valley_and_blizzards();
+    let map = read_map_of_valley_with_blizzards();
 
     let rows = map.len();
     let cols = map[0].len();
@@ -63,7 +63,7 @@ fn solve_puzzle1() {
     println!("{minutes}");
 }
 
-// Implementation of BFS
+// Implementation of A* search algorithm: https://en.wikipedia.org/wiki/A*_search_algorithm
 fn calculate_min_minutes_to_reach_valley_end(
     valley_info: &ValleyInfo,
     blizzards: &[Blizzard],
@@ -86,10 +86,9 @@ fn calculate_min_minutes_to_reach_valley_end(
 
     let mut seen = HashSet::new();
 
-    while !states.is_empty() {
-        let (current_state, _) = states.pop().unwrap();
+    while let Some((current_state, _)) = states.pop() {
         if current_state.position == valley_info.end_position {
-            return current_state.minute;
+            return current_state.minute as i32;
         }
 
         if !seen.insert((current_state.position, current_state.minute)) {
@@ -109,9 +108,7 @@ fn calculate_min_minutes_to_reach_valley_end(
 
         let blizzards = blizzards_per_minute.get(&current_state.minute).unwrap();
 
-        // if current_state.minute <= 18 {
-        //     print_valley(&current_state, blizzards, valley_info);
-        // }
+        // print_valley(&current_state, blizzards, valley_info);
 
         let next_states = calculate_next_states(&current_state, blizzards, valley_info, &seen);
         for next_state in next_states {
@@ -173,7 +170,7 @@ fn calculate_next_states(
     current_state: &ValleyState,
     blizzards: &[Blizzard],
     valley_info: &ValleyInfo,
-    seen: &HashSet<(Position, i32)>,
+    seen: &HashSet<(Position, usize)>,
 ) -> Vec<ValleyState> {
     let mut result = vec![];
 
@@ -322,7 +319,7 @@ fn move_blizzards(blizzards: &[Blizzard], valley_info: &ValleyInfo) -> Vec<Blizz
     result
 }
 
-fn read_map_of_valley_and_blizzards() -> Vec<String> {
+fn read_map_of_valley_with_blizzards() -> Vec<String> {
     let mut map = vec![];
 
     loop {
@@ -346,18 +343,18 @@ fn read_map_of_valley_and_blizzards() -> Vec<String> {
 #[derive(Hash, PartialEq, Eq, Debug)]
 struct ValleyState {
     position: Position,
-    minute: i32,
-    estimated_distance_to_end: i32,
+    minute: usize,
+    estimated_distance_to_end: usize,
 }
 
 impl ValleyState {
-    fn get_score(&self) -> i32 {
+    fn get_score(&self) -> usize {
         self.minute + self.estimated_distance_to_end
     }
 
     fn set_estimated_distance_to_end(&mut self, end: &Position) {
         self.estimated_distance_to_end =
-            end.row.abs_diff(self.position.row) as i32 + end.col.abs_diff(self.position.col) as i32;
+            end.row.abs_diff(self.position.row) + end.col.abs_diff(self.position.col);
     }
 }
 
