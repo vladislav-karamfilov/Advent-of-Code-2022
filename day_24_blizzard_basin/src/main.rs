@@ -1,17 +1,45 @@
 use std::{
     cmp::Reverse,
     collections::{HashMap, HashSet},
+    mem::swap,
 };
 
 use priority_queue::PriorityQueue;
 
 fn main() {
-    solve_puzzle1();
+    // solve_puzzle1();
     solve_puzzle2();
 }
 
 #[allow(dead_code)]
-fn solve_puzzle2() {}
+fn solve_puzzle2() {
+    let map = read_map_of_valley_with_blizzards();
+
+    let mut valley_info = build_valley_info(&map);
+
+    let blizzards = find_blizzards(&map, &valley_info);
+
+    let mut blizzards_per_minute = HashMap::new();
+    blizzards_per_minute.insert(0, blizzards);
+
+    let mut total_minutes = 0;
+    for _ in 0..3 {
+        let minutes = calculate_min_minutes_to_reach_valley_end(
+            &valley_info,
+            &mut blizzards_per_minute,
+            total_minutes,
+        );
+
+        total_minutes += minutes;
+
+        swap(
+            &mut valley_info.start_position,
+            &mut valley_info.end_position,
+        );
+    }
+
+    println!("{total_minutes}");
+}
 
 #[allow(dead_code)]
 fn solve_puzzle1() {
@@ -21,7 +49,11 @@ fn solve_puzzle1() {
 
     let blizzards = find_blizzards(&map, &valley_info);
 
-    let minutes = calculate_min_minutes_to_reach_valley_end(&valley_info, &blizzards);
+    let mut blizzards_per_minute = HashMap::new();
+    blizzards_per_minute.insert(0, blizzards);
+
+    let minutes =
+        calculate_min_minutes_to_reach_valley_end(&valley_info, &mut blizzards_per_minute, 0);
 
     println!("{minutes}");
 }
@@ -29,13 +61,14 @@ fn solve_puzzle1() {
 // Implementation of A* search algorithm: https://en.wikipedia.org/wiki/A*_search_algorithm
 fn calculate_min_minutes_to_reach_valley_end(
     valley_info: &ValleyInfo,
-    blizzards: &[Blizzard],
-) -> i32 {
+    blizzards_per_minute: &mut HashMap<usize, Vec<Blizzard>>,
+    start_minute: usize,
+) -> usize {
     let mut states = PriorityQueue::new();
 
     let mut initial_state = ValleyState {
         position: valley_info.start_position,
-        minute: 0,
+        minute: start_minute,
         estimated_distance_to_end: 0,
     };
 
@@ -44,21 +77,25 @@ fn calculate_min_minutes_to_reach_valley_end(
     let state_score = initial_state.get_score();
     states.push(initial_state, Reverse(state_score));
 
-    let mut blizzards_per_minute = HashMap::new();
-    blizzards_per_minute.insert(0, blizzards.to_vec());
-
     let mut seen = HashSet::new();
 
     while let Some((current_state, _)) = states.pop() {
         if current_state.position == valley_info.end_position {
-            return current_state.minute as i32;
+            return current_state.minute - start_minute;
         }
 
         if !seen.insert((current_state.position, current_state.minute)) {
             continue;
         }
 
+        // print_valley(
+        //     &current_state,
+        //     blizzards_per_minute.get(&current_state.minute).unwrap(),
+        //     valley_info,
+        // );
+
         let next_minute = current_state.minute + 1;
+
         if !blizzards_per_minute.contains_key(&next_minute) {
             let next_minute_blizzards = move_blizzards(
                 blizzards_per_minute.get(&current_state.minute).unwrap(),
@@ -70,8 +107,6 @@ fn calculate_min_minutes_to_reach_valley_end(
 
         let next_minute_blizzards = blizzards_per_minute.get(&next_minute).unwrap();
 
-        // print_valley(&current_state, blizzards, valley_info);
-
         let next_states =
             calculate_next_states(&current_state, next_minute_blizzards, valley_info, &seen);
 
@@ -81,7 +116,7 @@ fn calculate_min_minutes_to_reach_valley_end(
         }
     }
 
-    -1
+    usize::MAX
 }
 
 fn calculate_next_states(
@@ -95,6 +130,7 @@ fn calculate_next_states(
     let current_row = current_state.position.row;
     let current_col = current_state.position.col;
     let next_minute = current_state.minute + 1;
+    let end_with_move_down = valley_info.end_position.row > valley_info.start_position.row;
 
     // Up
     if current_row > 1 {
@@ -112,6 +148,13 @@ fn calculate_next_states(
                 estimated_distance_to_end: 0,
             });
         }
+    } else if !end_with_move_down && current_row == 1 && current_col == valley_info.end_position.col
+    {
+        result.push(ValleyState {
+            position: valley_info.end_position,
+            minute: next_minute,
+            estimated_distance_to_end: 0,
+        });
     }
 
     // Down
@@ -130,7 +173,10 @@ fn calculate_next_states(
                 estimated_distance_to_end: 0,
             });
         }
-    } else if current_row == valley_info.rows - 2 && current_col == valley_info.end_position.col {
+    } else if end_with_move_down
+        && current_row == valley_info.rows - 2
+        && current_col == valley_info.end_position.col
+    {
         result.push(ValleyState {
             position: valley_info.end_position,
             minute: next_minute,
@@ -139,7 +185,7 @@ fn calculate_next_states(
     }
 
     // Right
-    if current_row > 0 && current_col < valley_info.cols - 2 {
+    if current_row > 0 && current_row < valley_info.rows - 1 && current_col < valley_info.cols - 2 {
         let next_position = Position {
             row: current_row,
             col: current_col + 1,
@@ -157,7 +203,7 @@ fn calculate_next_states(
     }
 
     // Left
-    if current_row > 0 && current_col > 1 {
+    if current_row > 0 && current_row < valley_info.rows - 1 && current_col > 1 {
         let next_position = Position {
             row: current_row,
             col: current_col - 1,
@@ -381,13 +427,12 @@ impl ValleyState {
     }
 }
 
-#[derive(Clone, Debug)]
 struct Blizzard {
     direction: MoveDirection,
     position: Position,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 struct Position {
     row: usize,
     col: usize,
