@@ -49,9 +49,9 @@ fn solve_puzzle1() {
                 _ => None,
             };
 
-            if blizzard_direction.is_some() {
+            if let Some(blizzard_direction) = blizzard_direction {
                 blizzards.push(Blizzard {
-                    direction: blizzard_direction.unwrap(),
+                    direction: blizzard_direction,
                     position: Position { row, col },
                 });
             }
@@ -95,75 +95,30 @@ fn calculate_min_minutes_to_reach_valley_end(
             continue;
         }
 
-        if !blizzards_per_minute.contains_key(&current_state.minute) {
-            let current_minute_blizzards = move_blizzards(
-                blizzards_per_minute
-                    .get(&(current_state.minute - 1))
-                    .unwrap(),
+        let next_minute = current_state.minute + 1;
+        if !blizzards_per_minute.contains_key(&next_minute) {
+            let next_minute_blizzards = move_blizzards(
+                blizzards_per_minute.get(&current_state.minute).unwrap(),
                 valley_info,
             );
 
-            blizzards_per_minute.insert(current_state.minute, current_minute_blizzards);
+            blizzards_per_minute.insert(next_minute, next_minute_blizzards);
         }
 
-        let blizzards = blizzards_per_minute.get(&current_state.minute).unwrap();
+        let next_minute_blizzards = blizzards_per_minute.get(&next_minute).unwrap();
 
         // print_valley(&current_state, blizzards, valley_info);
 
-        let next_states = calculate_next_states(&current_state, blizzards, valley_info, &seen);
+        let next_states =
+            calculate_next_states(&current_state, next_minute_blizzards, valley_info, &seen);
+
         for next_state in next_states {
             let state_score = next_state.get_score();
             states.push(next_state, Reverse(state_score));
         }
-
-        // Wait on same position
-        let same_position_state = ValleyState {
-            position: current_state.position,
-            minute: current_state.minute + 1,
-            estimated_distance_to_end: current_state.estimated_distance_to_end,
-        };
-
-        let state_score = same_position_state.get_score();
-        states.push(same_position_state, Reverse(state_score));
     }
 
     -1
-}
-
-fn print_valley(current_state: &ValleyState, blizzards: &[Blizzard], valley_info: &ValleyInfo) {
-    println!("On minute {}", current_state.minute);
-    for row in 0..valley_info.rows {
-        for col in 0..valley_info.cols {
-            let position = Position { row, col };
-            if position == current_state.position {
-                print!("E");
-            } else if position == valley_info.start_position || position == valley_info.end_position
-            {
-                print!(".");
-            } else if row == 0
-                || row == valley_info.rows - 1
-                || col == 0
-                || col == valley_info.cols - 1
-            {
-                print!("#");
-            } else {
-                if let Some(blizzard) = blizzards.iter().find(|b| b.position == position) {
-                    match blizzard.direction {
-                        MoveDirection::Up => print!("^"),
-                        MoveDirection::Down => print!("v"),
-                        MoveDirection::Right => print!(">"),
-                        MoveDirection::Left => print!("<"),
-                    }
-                } else {
-                    print!(".");
-                }
-            }
-        }
-
-        println!();
-    }
-
-    println!();
 }
 
 fn calculate_next_states(
@@ -174,21 +129,23 @@ fn calculate_next_states(
 ) -> Vec<ValleyState> {
     let mut result = vec![];
 
-    let (current_row, current_col) = (current_state.position.row, current_state.position.col);
+    let current_row = current_state.position.row;
+    let current_col = current_state.position.col;
+    let next_minute = current_state.minute + 1;
 
     // Up
     if current_row > 1 {
-        let new_position = Position {
+        let next_position = Position {
             row: current_row - 1,
             col: current_col,
         };
 
-        if !seen.contains(&(new_position, current_state.minute + 1))
-            && !blizzards.iter().any(|b| b.position == new_position)
+        if !seen.contains(&(next_position, next_minute))
+            && !blizzards.iter().any(|b| b.position == next_position)
         {
             result.push(ValleyState {
-                position: new_position,
-                minute: current_state.minute + 1,
+                position: next_position,
+                minute: next_minute,
                 estimated_distance_to_end: 0,
             });
         }
@@ -196,41 +153,41 @@ fn calculate_next_states(
 
     // Down
     if current_row < valley_info.rows - 2 {
-        let new_position = Position {
+        let next_position = Position {
             row: current_row + 1,
             col: current_col,
         };
 
-        if !seen.contains(&(new_position, current_state.minute + 1))
-            && !blizzards.iter().any(|b| b.position == new_position)
+        if !seen.contains(&(next_position, next_minute))
+            && !blizzards.iter().any(|b| b.position == next_position)
         {
             result.push(ValleyState {
-                position: new_position,
-                minute: current_state.minute + 1,
+                position: next_position,
+                minute: next_minute,
                 estimated_distance_to_end: 0,
             });
         }
     } else if current_row == valley_info.rows - 2 && current_col == valley_info.end_position.col {
         result.push(ValleyState {
             position: valley_info.end_position,
-            minute: current_state.minute + 1,
+            minute: next_minute,
             estimated_distance_to_end: 0,
         });
     }
 
     // Right
     if current_row > 0 && current_col < valley_info.cols - 2 {
-        let new_position = Position {
+        let next_position = Position {
             row: current_row,
             col: current_col + 1,
         };
 
-        if !seen.contains(&(new_position, current_state.minute + 1))
-            && !blizzards.iter().any(|b| b.position == new_position)
+        if !seen.contains(&(next_position, next_minute))
+            && !blizzards.iter().any(|b| b.position == next_position)
         {
             result.push(ValleyState {
-                position: new_position,
-                minute: current_state.minute + 1,
+                position: next_position,
+                minute: next_minute,
                 estimated_distance_to_end: 0,
             });
         }
@@ -238,17 +195,17 @@ fn calculate_next_states(
 
     // Left
     if current_row > 0 && current_col > 1 {
-        let new_position = Position {
+        let next_position = Position {
             row: current_row,
             col: current_col - 1,
         };
 
-        if !seen.contains(&(new_position, current_state.minute + 1))
-            && !blizzards.iter().any(|b| b.position == new_position)
+        if !seen.contains(&(next_position, next_minute))
+            && !blizzards.iter().any(|b| b.position == next_position)
         {
             result.push(ValleyState {
-                position: new_position,
-                minute: current_state.minute + 1,
+                position: next_position,
+                minute: next_minute,
                 estimated_distance_to_end: 0,
             });
         }
@@ -256,6 +213,19 @@ fn calculate_next_states(
 
     for next_state in result.iter_mut() {
         next_state.set_estimated_distance_to_end(&valley_info.end_position);
+    }
+
+    if !seen.contains(&(current_state.position, next_minute))
+        && !blizzards
+            .iter()
+            .any(|b| b.position == current_state.position)
+    {
+        // Add wait on same position state
+        result.push(ValleyState {
+            position: current_state.position,
+            minute: next_minute,
+            estimated_distance_to_end: current_state.estimated_distance_to_end,
+        });
     }
 
     result
@@ -338,6 +308,44 @@ fn read_map_of_valley_with_blizzards() -> Vec<String> {
     }
 
     map
+}
+
+#[allow(dead_code)]
+fn print_valley(current_state: &ValleyState, blizzards: &[Blizzard], valley_info: &ValleyInfo) {
+    println!("On minute {}:", current_state.minute);
+
+    for row in 0..valley_info.rows {
+        for col in 0..valley_info.cols {
+            let position = Position { row, col };
+            if position == current_state.position {
+                print!("E");
+            } else if position == valley_info.start_position || position == valley_info.end_position
+            {
+                print!(".");
+            } else if row == 0
+                || row == valley_info.rows - 1
+                || col == 0
+                || col == valley_info.cols - 1
+            {
+                print!("#");
+            } else {
+                if let Some(blizzard) = blizzards.iter().find(|b| b.position == position) {
+                    match blizzard.direction {
+                        MoveDirection::Up => print!("^"),
+                        MoveDirection::Down => print!("v"),
+                        MoveDirection::Right => print!(">"),
+                        MoveDirection::Left => print!("<"),
+                    }
+                } else {
+                    print!(".");
+                }
+            }
+        }
+
+        println!();
+    }
+
+    println!();
 }
 
 #[derive(Hash, PartialEq, Eq, Debug)]
