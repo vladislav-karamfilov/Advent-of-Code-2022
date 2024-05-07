@@ -7,56 +7,19 @@ use priority_queue::PriorityQueue;
 
 fn main() {
     solve_puzzle1();
+    solve_puzzle2();
 }
 
+#[allow(dead_code)]
+fn solve_puzzle2() {}
+
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let map = read_map_of_valley_with_blizzards();
 
-    let rows = map.len();
-    let cols = map[0].len();
-    let start_col = map[0].chars().position(|ch| ch == '.').unwrap();
-    let end_col = map[rows - 1].chars().position(|ch| ch == '.').unwrap();
+    let valley_info = build_valley_info(&map);
 
-    let valley_info = ValleyInfo {
-        rows,
-        cols,
-        start_position: Position {
-            row: 0,
-            col: start_col,
-        },
-        end_position: Position {
-            row: rows - 1,
-            col: end_col,
-        },
-    };
-
-    let mut blizzards = vec![];
-    for (row, map_row) in map.iter().enumerate() {
-        if row == 0 || row == rows - 1 {
-            continue;
-        }
-
-        for (col, ch) in map_row.chars().enumerate() {
-            if col == 0 || col == cols - 1 {
-                continue;
-            }
-
-            let blizzard_direction = match ch {
-                '>' => Some(MoveDirection::Right),
-                '<' => Some(MoveDirection::Left),
-                '^' => Some(MoveDirection::Up),
-                'v' => Some(MoveDirection::Down),
-                _ => None,
-            };
-
-            if let Some(blizzard_direction) = blizzard_direction {
-                blizzards.push(Blizzard {
-                    direction: blizzard_direction,
-                    position: Position { row, col },
-                });
-            }
-        }
-    }
+    let blizzards = find_blizzards(&map, &valley_info);
 
     let minutes = calculate_min_minutes_to_reach_valley_end(&valley_info, &blizzards);
 
@@ -287,6 +250,58 @@ fn move_blizzards(blizzards: &[Blizzard], valley_info: &ValleyInfo) -> Vec<Blizz
     }
 
     result
+}
+
+fn find_blizzards(map: &Vec<String>, valley_info: &ValleyInfo) -> Vec<Blizzard> {
+    let mut blizzards = vec![];
+    for (row, map_row) in map.iter().enumerate() {
+        if row == 0 || row == valley_info.rows - 1 {
+            continue;
+        }
+
+        for (col, ch) in map_row.chars().enumerate() {
+            if col == 0 || col == valley_info.cols - 1 {
+                continue;
+            }
+
+            let blizzard_direction = match ch {
+                '>' => Some(MoveDirection::Right),
+                '<' => Some(MoveDirection::Left),
+                '^' => Some(MoveDirection::Up),
+                'v' => Some(MoveDirection::Down),
+                _ => None,
+            };
+
+            if let Some(blizzard_direction) = blizzard_direction {
+                blizzards.push(Blizzard {
+                    direction: blizzard_direction,
+                    position: Position { row, col },
+                });
+            }
+        }
+    }
+
+    blizzards
+}
+
+fn build_valley_info(map: &Vec<String>) -> ValleyInfo {
+    let rows = map.len();
+    let cols = map[0].len();
+    let start_col = map[0].chars().position(|ch| ch == '.').unwrap();
+    let end_col = map[rows - 1].chars().position(|ch| ch == '.').unwrap();
+
+    ValleyInfo {
+        rows,
+        cols,
+        start_position: Position {
+            row: 0,
+            col: start_col,
+        },
+        end_position: Position {
+            row: rows - 1,
+            col: end_col,
+        },
+    }
 }
 
 fn read_map_of_valley_with_blizzards() -> Vec<String> {
