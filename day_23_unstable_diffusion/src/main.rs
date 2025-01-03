@@ -1,13 +1,29 @@
 use std::collections::HashMap;
 
 fn main() {
-    solve_puzzle1();
+    // solve_puzzle1();
+    solve_puzzle2();
 }
 
+#[allow(dead_code)]
+fn solve_puzzle2() {
+    let grove = read_grove();
+
+    let mut grove = enlarge_grove(grove, 100);
+
+    let mut round = 0;
+    while simulate_elves_process_round(&mut grove, round) {
+        round += 1;
+    }
+
+    println!("{}", round + 1);
+}
+
+#[allow(dead_code)]
 fn solve_puzzle1() {
     let grove = read_grove();
 
-    let mut grove = enlarge_grove(grove);
+    let mut grove = enlarge_grove(grove, 10);
 
     for round in 0..10 {
         simulate_elves_process_round(&mut grove, round);
@@ -59,9 +75,10 @@ fn count_empty_ground_tiles_in_smallest_rectangle(grove: &[Vec<char>]) -> u16 {
     empty_ground_tiles
 }
 
-fn simulate_elves_process_round(grove: &mut [Vec<char>], round: u8) {
+fn simulate_elves_process_round(grove: &mut [Vec<char>], round: u16) -> bool {
     let mut old_positions_per_proposed_position: HashMap<Position, Vec<Position>> = HashMap::new();
 
+    // first half
     for row in 0..grove.len() {
         for col in 0..grove[row].len() {
             if grove[row][col] != '#' {
@@ -77,21 +94,27 @@ fn simulate_elves_process_round(grove: &mut [Vec<char>], round: u8) {
         }
     }
 
+    // second half
+    let mut has_any_elf_moved = false;
     for (new_position, old_positions) in old_positions_per_proposed_position.iter() {
         if old_positions.len() == 1 {
             grove[new_position.row][new_position.col] = '#';
 
             let old_position = old_positions[0];
             grove[old_position.row][old_position.col] = '.';
+
+            has_any_elf_moved = true;
         }
     }
+
+    has_any_elf_moved
 }
 
 fn propose_new_position(
     grove: &[Vec<char>],
     row: usize,
     col: usize,
-    round: u8,
+    round: u16,
 ) -> Option<Position> {
     if !can_elf_propose_new_position(grove, row, col) {
         return None;
@@ -175,20 +198,20 @@ fn can_elf_propose_new_position(grove: &[Vec<char>], row: usize, col: usize) -> 
         || grove[row + 1][col + 1] == '#' // SE
 }
 
-fn enlarge_grove(grove: Vec<Vec<char>>) -> Vec<Vec<char>> {
-    let mut result = Vec::with_capacity(22 + grove.len());
+fn enlarge_grove(grove: Vec<Vec<char>>, size: usize) -> Vec<Vec<char>> {
+    let mut result = Vec::with_capacity(2 * size + grove.len());
 
-    let new_width = 22 + grove[0].len();
+    let new_width = 2 * size + grove[0].len();
 
-    for _ in 0..11 {
+    for _ in 0..size {
         result.push(vec!['.'; new_width]);
     }
 
     for line in grove {
-        result.push([vec!['.'; 11], line, vec!['.'; 11]].concat());
+        result.push([vec!['.'; size], line, vec!['.'; size]].concat());
     }
 
-    for _ in 0..11 {
+    for _ in 0..size {
         result.push(vec!['.'; new_width]);
     }
 
